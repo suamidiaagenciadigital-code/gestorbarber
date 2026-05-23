@@ -25,13 +25,20 @@ export default function MasterLogin() {
     e.preventDefault();
     setError('');
     setLoading(true);
-    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
-    if (authError) {
-      setError('E-mail ou senha inválidos.');
-    } else {
-      navigate('/master');
+    try {
+      const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
+      if (authError) {
+        setError(`Erro: ${authError.message}`);
+      } else if (data?.user) {
+        navigate('/master');
+      } else {
+        setError('Não foi possível autenticar. Tente novamente.');
+      }
+    } catch (e) {
+      setError(`Erro de conexão: ${e.message}`);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleGoogle = async () => {
