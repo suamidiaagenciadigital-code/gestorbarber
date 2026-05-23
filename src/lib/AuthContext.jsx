@@ -37,17 +37,22 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
+    console.log('[AuthContext] useEffect start');
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      console.log('[AuthContext] getSession resolved, user:', session?.user?.email ?? 'none');
       const user = session?.user ?? null;
       setSupabaseUser(user);
       try {
         if (user?.email) {
+          console.log('[AuthContext] fetching super admin emails...');
           const emails = await fetchSuperAdminEmails();
+          console.log('[AuthContext] emails:', emails, 'includes?', emails.includes(user.email));
           setIsSuperAdmin(emails.includes(user.email));
         }
       } catch (e) {
         console.error('[AuthContext] fetchSuperAdminEmails failed:', e);
       } finally {
+        console.log('[AuthContext] setLoading(false)');
         setLoading(false);
       }
     }).catch((e) => {
