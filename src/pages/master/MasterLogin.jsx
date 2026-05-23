@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 
 function GoogleIcon() {
@@ -19,7 +18,6 @@ export default function MasterLogin() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingGoogle, setLoadingGoogle] = useState(false);
-  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -29,14 +27,19 @@ export default function MasterLogin() {
       const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
       if (authError) {
         setError(`Erro: ${authError.message}`);
-      } else if (data?.user) {
-        navigate('/master');
-      } else {
-        setError('Não foi possível autenticar. Tente novamente.');
+        setLoading(false);
+        return;
       }
-    } catch (e) {
-      setError(`Erro de conexão: ${e.message}`);
-    } finally {
+      if (!data?.user) {
+        setError('Não foi possível autenticar. Tente novamente.');
+        setLoading(false);
+        return;
+      }
+      // Hard redirect so AuthContext re-initializes with the fresh session
+      // and the SuperAdminRoute gets isSuperAdmin=true from the start
+      window.location.href = '/master';
+    } catch (err) {
+      setError(`Erro de conexão: ${err.message}`);
       setLoading(false);
     }
   };
