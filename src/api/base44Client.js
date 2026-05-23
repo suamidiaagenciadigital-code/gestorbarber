@@ -44,13 +44,15 @@ function makeEntity(entityName) {
   if (!table) throw new Error(`[base44] Unknown entity: ${entityName}`);
 
   return {
-    /** Filter rows by exact-match criteria */
-    filter: async (filters = {}) => {
+    /** Filter rows by exact-match criteria, with optional sort and limit */
+    filter: async (filters = {}, sortField = '-created_at', limit = 200) => {
+      const { col, ascending } = parseSortField(sortField);
       let q = supabase.from(table).select('*');
       for (const [key, val] of Object.entries(filters)) {
         if (val === undefined || val === null) continue;
         q = q.eq(key, val);
       }
+      q = q.order(col, { ascending }).limit(limit);
       const { data, error } = await q;
       if (error) throw error;
       return data ?? [];

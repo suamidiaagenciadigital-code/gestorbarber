@@ -29,5 +29,8 @@ export function useCompany() {
     staleTime: 60_000,
   });
 
-  return { company, isLoading };
+  // Return the resolved company id (from fetched company or from session)
+  const resolvedCompanyId = company?.id ?? companyId;
+
+  return { company, companyId: resolvedCompanyId, isLoading };
 }
