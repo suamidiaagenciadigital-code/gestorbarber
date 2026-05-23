@@ -60,20 +60,17 @@ export function AuthProvider({ children }) {
         const user = session?.user ?? null;
         setSupabaseUser(user);
         if (user?.email) {
-          // Keep loading=true while we verify super admin status
-          // so guards don't redirect prematurely
-          setLoading(true);
+          // Do NOT touch loading here — it is managed exclusively by getSession().
+          // onAuthStateChange can fire multiple times (INITIAL_SESSION, SIGNED_IN,
+          // TOKEN_REFRESHED…) and re-setting loading=true causes it to get stuck.
           try {
             const emails = await fetchSuperAdminEmails();
             setIsSuperAdmin(emails.includes(user.email));
           } catch (e) {
             console.error('[AuthContext] fetchSuperAdminEmails failed (onChange):', e);
-          } finally {
-            setLoading(false);
           }
         } else {
           setIsSuperAdmin(false);
-          setLoading(false);
         }
       }
     );
