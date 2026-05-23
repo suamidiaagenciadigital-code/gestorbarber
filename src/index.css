@@ -1,0 +1,108 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400;1,700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* ── Gestor Barber Design Tokens ── */
+
+    /* Backgrounds */
+    --background: 38 33% 96%;          /* #F7F3EC */
+    --foreground: 0 0% 9%;             /* #171717 */
+
+    /* Card */
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 9%;
+
+    /* Popover */
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 9%;
+
+    /* Primary: #111111 */
+    --primary: 0 0% 7%;
+    --primary-foreground: 0 0% 98%;
+
+    /* Secondary: soft warm */
+    --secondary: 38 33% 93%;
+    --secondary-foreground: 0 0% 9%;
+
+    /* Muted */
+    --muted: 35 20% 90%;
+    --muted-foreground: 25 10% 42%;    /* #6B6258 */
+
+    /* Accent/CTA: #C89B3C */
+    --accent: 40 58% 51%;
+    --accent-foreground: 0 0% 7%;
+
+    /* Destructive */
+    --destructive: 0 72% 51%;          /* #DC2626 */
+    --destructive-foreground: 0 0% 98%;
+
+    /* Border & Input */
+    --border: 33 30% 84%;              /* #E8DED0 */
+    --input: 33 30% 84%;
+    --ring: 40 58% 51%;                /* focus ring em dourado */
+
+    /* Radius */
+    --radius: 0.75rem;
+
+    /* Fonts */
+    --font-inter: 'Inter', system-ui, sans-serif;
+    --font-playfair: 'Playfair Display', Georgia, serif;
+
+    /* Brand shortcuts */
+    --brand: 0 0% 7%;                  /* #111111 */
+    --brand-light: 38 33% 93%;         /* #EFE9DF */
+    --brand-mid: 0 0% 20%;             /* #333333 */
+    --gold: 40 58% 51%;                /* #C89B3C */
+    --gold-hover: 38 60% 45%;          /* #B8892F */
+    --warm-bg: 38 33% 96%;             /* #F7F3EC */
+    --text-soft: 25 10% 42%;           /* #6B6258 */
+  }
+
+  .dark {
+    --background: 0 0% 7%;
+    --foreground: 38 33% 96%;
+    --card: 0 0% 10%;
+    --card-foreground: 38 33% 96%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 38 33% 96%;
+    --primary: 40 58% 51%;
+    --primary-foreground: 0 0% 7%;
+    --secondary: 0 0% 15%;
+    --secondary-foreground: 38 33% 90%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 25 10% 55%;
+    --accent: 40 58% 51%;
+    --accent-foreground: 0 0% 7%;
+    --destructive: 0 62% 40%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 18%;
+    --input: 0 0% 18%;
+    --ring: 40 58% 51%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-inter;
+  }
+  h1, h2 {
+    font-family: var(--font-playfair);
+  }
+}
+
+/* ── Focus ring global (acessibilidade AA) ── */
+@layer base {
+  *:focus-visible {
+    outline: 2px solid hsl(var(--gold));
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px hsl(var(--gold) / 0.15);
+    border-radius: 4px;
+  }
+}
