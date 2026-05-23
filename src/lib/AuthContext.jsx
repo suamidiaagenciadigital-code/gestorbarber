@@ -52,10 +52,15 @@ export function AuthProvider({ children }) {
         const user = session?.user ?? null;
         setSupabaseUser(user);
         if (user?.email) {
+          // Keep loading=true while we verify super admin status
+          // so guards don't redirect prematurely
+          setLoading(true);
           const emails = await fetchSuperAdminEmails();
           setIsSuperAdmin(emails.includes(user.email));
+          setLoading(false);
         } else {
           setIsSuperAdmin(false);
+          setLoading(false);
         }
       }
     );
