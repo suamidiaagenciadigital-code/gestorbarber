@@ -21,6 +21,7 @@ import Termos from './pages/Termos';
 import Privacidade from './pages/Privacidade';
 
 // Master pages
+import MasterLogin from './pages/master/MasterLogin';
 import ListaBarbearias from './pages/master/ListaBarbearias';
 import NovaBarbearia from './pages/master/NovaBarbearia';
 
@@ -80,6 +81,7 @@ function App() {
             } />
 
             {/* ── MASTER PANEL (super admin only) ── */}
+            <Route path="/master/login" element={<MasterLogin />} />
             <Route path="/master" element={<SuperAdminRoute><MasterPanel /></SuperAdminRoute>} />
             <Route path="/master/barbearias" element={<SuperAdminRoute><ListaBarbearias /></SuperAdminRoute>} />
             <Route path="/master/barbearias/nova" element={<SuperAdminRoute><NovaBarbearia /></SuperAdminRoute>} />
