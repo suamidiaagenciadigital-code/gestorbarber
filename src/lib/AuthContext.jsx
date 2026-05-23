@@ -40,10 +40,18 @@ export function AuthProvider({ children }) {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       const user = session?.user ?? null;
       setSupabaseUser(user);
-      if (user?.email) {
-        const emails = await fetchSuperAdminEmails();
-        setIsSuperAdmin(emails.includes(user.email));
+      try {
+        if (user?.email) {
+          const emails = await fetchSuperAdminEmails();
+          setIsSuperAdmin(emails.includes(user.email));
+        }
+      } catch (e) {
+        console.error('[AuthContext] fetchSuperAdminEmails failed:', e);
+      } finally {
+        setLoading(false);
       }
+    }).catch((e) => {
+      console.error('[AuthContext] getSession failed:', e);
       setLoading(false);
     });
 
@@ -55,9 +63,14 @@ export function AuthProvider({ children }) {
           // Keep loading=true while we verify super admin status
           // so guards don't redirect prematurely
           setLoading(true);
-          const emails = await fetchSuperAdminEmails();
-          setIsSuperAdmin(emails.includes(user.email));
-          setLoading(false);
+          try {
+            const emails = await fetchSuperAdminEmails();
+            setIsSuperAdmin(emails.includes(user.email));
+          } catch (e) {
+            console.error('[AuthContext] fetchSuperAdminEmails failed (onChange):', e);
+          } finally {
+            setLoading(false);
+          }
         } else {
           setIsSuperAdmin(false);
           setLoading(false);
