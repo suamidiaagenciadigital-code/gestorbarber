@@ -40,6 +40,12 @@ export default function AppLayout({ children }) {
   const slugParam = isSuperAdmin ? new URLSearchParams(window.location.search).get('slug') : null;
   const withSlug = (path) => slugParam ? `${path}?slug=${slugParam}` : path;
 
+  // Hooks must always be called — redirects happen after all hooks
+  useEffect(() => {
+    const companyName = company?.name;
+    document.title = companyName ? `${companyName} | Gestor Barber` : 'Gestor Barber';
+  }, [company?.name]);
+
   // Super admin visiting an app page without a company context → send to master
   if (isSuperAdmin && !loadingCompany && !companyId) {
     return <Navigate to="/master" replace />;
@@ -49,11 +55,6 @@ export default function AppLayout({ children }) {
   if (!isSuperAdmin && !loadingCompany && company && !company.onboarding_completed) {
     return <Navigate to="/onboarding" replace />;
   }
-
-  useEffect(() => {
-    const companyName = company?.name;
-    document.title = companyName ? `${companyName} | Gestor Barber` : 'Gestor Barber';
-  }, [company?.name]);
 
   return (
     <div className="min-h-screen bg-warm-bg font-inter flex">
