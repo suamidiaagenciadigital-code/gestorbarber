@@ -36,7 +36,7 @@ async function sendEmail(to: string, subject: string, body: string): Promise<boo
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: 'Gestor Barber <noreply@gestorbarber.com.br>', to, subject, html: body }),
+      body: JSON.stringify({ from: 'Gestor Barber <noreply@gestorbarber.ia.br>', to, subject, html: body }),
     });
     return res.ok;
   } catch { return false; }
@@ -104,7 +104,7 @@ Deno.serve(async (req: Request) => {
 
   let email_enviado = false;
   if (enviar_credenciais_email && senha_gerada) {
-    const origin = req.headers.get('origin') || 'https://gestorbarber.com.br';
+    const origin = req.headers.get('origin') || 'https://gestorbarber.ia.br';
     const adminUrl = `${origin}/admin/login`;
     const emailBody = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#F8F7F3;padding:32px;border-radius:12px">
       <h1 style="color:#1B3A4B">Boas-vindas ao Gestor Barber! ✂️</h1>

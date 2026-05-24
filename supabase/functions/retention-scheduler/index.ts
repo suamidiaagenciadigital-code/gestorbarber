@@ -10,7 +10,7 @@ function daysSince(dateStr: string): number {
 }
 
 function buildRetentionMessage(customerName: string, days: number, companyName: string, bookingSlug?: string): string {
-  const bookingUrl = bookingSlug ? `https://gestorbarber.com.br/agendar/${bookingSlug}` : '';
+  const bookingUrl = bookingSlug ? `https://gestorbarber.ia.br/agendar/${bookingSlug}` : '';
   return `Oi, ${customerName}! 👋 Faz ${days} dias desde o seu último corte na ${companyName}. Sentimos sua falta! Que tal agendar um horário? ${bookingUrl ? `Reserve agora: ${bookingUrl}` : 'Entre em contato para agendar.'} 😊`;
 }
 
@@ -22,7 +22,7 @@ async function sendEmail(to: string, subject: string, body: string, fromName?: s
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        from: `${fromName || 'Gestor Barber'} <noreply@gestorbarber.com.br>`,
+        from: `${fromName || 'Gestor Barber'} <noreply@gestorbarber.ia.br>`,
         to, subject, html: body,
       }),
     });

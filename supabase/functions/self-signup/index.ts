@@ -15,7 +15,7 @@ async function sendEmail(to: string, subject: string, html: string): Promise<voi
   await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: 'Gestor Barber <noreply@gestorbarber.com.br>', to, subject, html }),
+    body: JSON.stringify({ from: 'Gestor Barber <noreply@gestorbarber.ia.br>', to, subject, html }),
   });
 }
 
@@ -105,7 +105,7 @@ Deno.serve(async (req: Request) => {
   }
 
   // Send welcome email
-  const origin = req.headers.get('origin') || 'https://gestorbarber.com.br';
+  const origin = req.headers.get('origin') || 'https://gestorbarber.ia.br';
   const loginUrl = `${origin}/admin/login`;
   const emailHtml = `
     <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#F8F7F3;padding:32px;border-radius:12px">

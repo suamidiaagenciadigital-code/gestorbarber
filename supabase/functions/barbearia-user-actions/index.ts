@@ -54,7 +54,7 @@ async function sendEmail(to: string, subject: string, body: string): Promise<boo
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: 'Gestor Barber <noreply@gestorbarber.com.br>', to, subject, html: body }),
+      body: JSON.stringify({ from: 'Gestor Barber <noreply@gestorbarber.ia.br>', to, subject, html: body }),
     });
     return res.ok;
   } catch (e) {
@@ -141,7 +141,7 @@ Deno.serve(async (req: Request) => {
     const expira = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
     await supabase.from('barbearia_users').update({ token_reset: token, token_reset_expira_em: expira }).eq('id', bu.id);
 
-    const origin = body.origin || req.headers.get('origin') || 'https://gestorbarber.com.br';
+    const origin = body.origin || req.headers.get('origin') || 'https://gestorbarber.ia.br';
     const resetUrl = `${origin}/admin/reset-senha?token=${token}`;
     const emailBody = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#F8F7F3;padding:32px;border-radius:12px">
       <h2 style="color:#1B3A4B">Gestor Barber — Redefinição de senha</h2>
@@ -200,7 +200,7 @@ Deno.serve(async (req: Request) => {
     const senha_hash = await hashPassword(nova_senha);
     await supabase.from('barbearia_users').update({ senha_hash, forcar_troca_senha: true }).eq('id', bu.id);
 
-    const origin = body.origin || req.headers.get('origin') || 'https://gestorbarber.com.br';
+    const origin = body.origin || req.headers.get('origin') || 'https://gestorbarber.ia.br';
     const adminUrl = `${origin}/admin/login`;
     const emailBody = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#F8F7F3;padding:32px;border-radius:12px">
       <h2 style="color:#1B3A4B">Credenciais reenviadas — Gestor Barber</h2>

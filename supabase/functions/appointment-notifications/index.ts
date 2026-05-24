@@ -55,7 +55,7 @@ async function sendEmail(to: string, subject: string, body: string): Promise<boo
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: 'Gestor Barber <noreply@gestorbarber.com.br>', to, subject, html: body }),
+      body: JSON.stringify({ from: 'Gestor Barber <noreply@gestorbarber.ia.br>', to, subject, html: body }),
     });
     return res.ok;
   } catch { return false; }
