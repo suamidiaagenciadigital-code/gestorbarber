@@ -99,10 +99,35 @@ export default function PublicBooking() {
     });
   };
 
-  const handleBook = () => {
+  const handleBook = async () => {
     if (!form.name.trim()) { setFormError('Por favor, informe seu nome'); return; }
     if (!form.phone.trim()) { setFormError('Por favor, informe seu telefone'); return; }
     setFormError('');
+
+    // Upsert customer: find by phone, create if not found
+    let customerId = null;
+    try {
+      const phoneNorm = form.phone.trim();
+      const existing = await base44.entities.Customer.filter({
+        company_id: company.id,
+        phone: phoneNorm,
+      });
+      if (existing.length > 0) {
+        customerId = existing[0].id;
+      } else {
+        const newCustomer = await base44.entities.Customer.create({
+          company_id: company.id,
+          name: form.name.trim(),
+          phone: phoneNorm,
+          status: 'active',
+        });
+        customerId = newCustomer?.id ?? null;
+      }
+    } catch (e) {
+      // Non-blocking: log but don't prevent booking from going through
+      console.warn('[PublicBooking] customer upsert failed:', e);
+    }
+
     const [h, m] = selected.time.split(':');
     const dt = new Date(selected.date);
     dt.setHours(+h, +m, 0, 0);
@@ -114,6 +139,7 @@ export default function PublicBooking() {
       professional_name: selected.professional?.id === 'any' ? 'Qualquer disponível' : selected.professional?.name,
       customer_name: form.name,
       customer_phone: form.phone,
+      customer_id: customerId,
       scheduled_at: dt.toISOString(),
       notes: form.notes,
       status: 'agendado',
