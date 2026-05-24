@@ -74,9 +74,23 @@ export default function PublicBooking() {
   const getAvailableSlots = () => {
     if (!selected.date || !selected.service || !company) return [];
     const dayKey = DAY_MAP[selected.date.getDay()];
-    const hours = company.business_hours?.[dayKey];
-    // If no hours configured, use sensible defaults (Mon–Sat 9h–19h)
-    const effectiveHours = hours ?? (dayKey !== 'dom' ? { active: true, open: '09:00', close: '19:00' } : { active: false });
+
+    // Use the selected professional's work_schedule when a specific pro is chosen.
+    // Fall back to company.business_hours only for "any available".
+    const proId = selected.professional?.id;
+    const pro = proId && proId !== 'any' ? professionals.find(p => p.id === proId) : null;
+    const proSchedule = pro?.work_schedule?.[dayKey];
+
+    let effectiveHours;
+    if (pro) {
+      // Professional explicitly has no schedule set for this day → closed
+      effectiveHours = proSchedule ?? { active: false };
+    } else {
+      // "Any available" → use company hours
+      const companyHours = company.business_hours?.[dayKey];
+      effectiveHours = companyHours ?? (dayKey !== 'dom' ? { active: true, open: '09:00', close: '19:00' } : { active: false });
+    }
+
     if (!effectiveHours.active) return [];
     const slots = generateTimeSlots(effectiveHours.open || '09:00', effectiveHours.close || '19:00', selected.service.duration_minutes || 30);
 
