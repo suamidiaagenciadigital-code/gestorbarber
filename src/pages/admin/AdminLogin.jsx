@@ -18,25 +18,35 @@ export default function AdminLogin() {
     e.preventDefault();
     setLoading(true);
     setError('');
-    const res = await base44.functions.invoke('barbeariaUserActions', {
-      action: 'login', email, senha
-    });
-    setLoading(false);
-    if (res.data?.success) {
-      const { user, company } = res.data;
-      // Salvar sessão no localStorage
-      localStorage.setItem('admin_session', JSON.stringify({ user, company }));
-      if (user.forcar_troca_senha) {
-        navigate('/admin/trocar-senha');
+    try {
+      const res = await base44.functions.invoke('barbeariaUserActions', {
+        action: 'login', email, senha,
+      });
+      setLoading(false);
+      if (res.data?.success) {
+        const { user, company } = res.data;
+        localStorage.setItem('admin_session', JSON.stringify({ user, company }));
+        if (user.forcar_troca_senha) {
+          navigate('/admin/trocar-senha');
+        } else {
+          navigate('/admin/dashboard');
+        }
       } else {
-        navigate('/admin/dashboard');
+        setError(res.data?.error || 'Credenciais inválidas');
       }
-    } else if (res.data?.error === 'pagamento_pendente') {
-      setError('⏳ Aguardando confirmação do pagamento. Se já pagou, aguarde alguns minutos e tente novamente.');
-    } else if (res.data?.error === 'acesso_suspenso') {
-      navigate('/admin/suspenso');
-    } else {
-      setError(res.data?.error || 'Credenciais inválidas');
+    } catch (err) {
+      setLoading(false);
+      // Extrair mensagem real do FunctionsHttpError (status 401/403/etc.)
+      let errData = null;
+      try { errData = await err.context?.json?.(); } catch {}
+      const errMsg = errData?.error;
+      if (errMsg === 'pagamento_pendente') {
+        setError('⏳ Aguardando confirmação do pagamento. Se já pagou, aguarde alguns minutos e tente novamente.');
+      } else if (errMsg === 'acesso_suspenso') {
+        navigate('/admin/suspenso');
+      } else {
+        setError(errMsg || 'Credenciais inválidas');
+      }
     }
   }
 
