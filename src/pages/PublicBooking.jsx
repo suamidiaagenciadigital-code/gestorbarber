@@ -214,13 +214,31 @@ export default function PublicBooking() {
               <div className="flex justify-between text-sm"><span className="text-gray-500">Horário</span><span className="font-semibold">{selected.time}</span></div>
               <div className="flex justify-between text-sm border-t border-black/8 pt-2 mt-2"><span className="text-gray-500">Valor</span><span className="font-black text-lg" style={{ color: primaryColor }}>R${selected.service?.price}</span></div>
             </div>
-            {company.whatsapp && (
-              <a href={`https://wa.me/55${company.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer"
-                className="block w-full text-center text-white text-sm font-bold py-3 rounded-xl transition-opacity hover:opacity-90"
-                style={{ backgroundColor: '#25D366' }}>
-                Confirmar pelo WhatsApp
-              </a>
-            )}
+            {company.whatsapp && (() => {
+              const dataFormatada = selected.date ? format(selected.date, "d 'de' MMMM 'de' yyyy", { locale: ptBR }) : '';
+              const msg = [
+                `Olá, ${company.nome_fantasia || company.name}! 👋`,
+                ``,
+                `Gostaria de confirmar meu agendamento:`,
+                ``,
+                `👤 Nome: ${form.name}`,
+                `✂️ Serviço: ${selected.service?.name}`,
+                `💈 Profissional: ${selected.professional?.id === 'any' ? 'Qualquer disponível' : selected.professional?.name}`,
+                `📅 Data: ${dataFormatada}`,
+                `🕐 Horário: ${selected.time}`,
+                `💰 Valor: R$ ${selected.service?.price}`,
+                form.notes ? `📝 Obs: ${form.notes}` : '',
+              ].filter(Boolean).join('\n');
+              return (
+                <a
+                  href={`https://wa.me/55${company.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`}
+                  target="_blank" rel="noopener noreferrer"
+                  className="block w-full text-center text-white text-sm font-bold py-3 rounded-xl transition-opacity hover:opacity-90"
+                  style={{ backgroundColor: '#25D366' }}>
+                  Confirmar pelo WhatsApp
+                </a>
+              );
+            })()}
             <p className="text-xs text-gray-400 mt-4">Dúvidas? Entre em contato com {company.name}</p>
           </div>
         </div>
@@ -464,7 +482,7 @@ export default function PublicBooking() {
       </div>
 
       <footer className="bg-white border-t border-black/10 py-4 text-center">
-        <p className="text-xs text-gray-400">Agendamento online por <span className="font-semibold text-[#1B3A4B]">BarbeiroPro AI</span></p>
+        <p className="text-xs text-gray-400">Agendamento online por <span className="font-semibold text-[#1B3A4B]">GestorBarber</span></p>
       </footer>
     </div>
   );
