@@ -1,7 +1,7 @@
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
-import { Scissors, Plus, Globe, CheckCircle, XCircle, Clock, X, ExternalLink } from 'lucide-react';
+import { Scissors, Plus, Globe, CheckCircle, XCircle, Clock, X, ExternalLink, Trash2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -14,7 +14,21 @@ const statusConfig = {
 
 export default function MasterPanel() {
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name: '', owner_email: '', plan_name: 'Starter', status: 'active' });
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [form, setForm] = useState({ name: '', owner_email: '', plan_name: 'Starter', status: 'active', slug: '' });
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
+
+  const toSlug = (str) =>
+    str.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '').slice(0, 30);
+
+  const handleNameChange = (value) => {
+    setForm(p => ({ ...p, name: value, ...(!slugManuallyEdited && { slug: toSlug(value) }) }));
+  };
+
+  const handleSlugChange = (value) => {
+    setSlugManuallyEdited(true);
+    setForm(p => ({ ...p, slug: toSlug(value) }));
+  };
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -30,12 +44,17 @@ export default function MasterPanel() {
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Company.create(data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['master-companies'] }); setShowForm(false); setForm({ name: '', owner_email: '', plan_name: 'Starter', status: 'active' }); },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['master-companies'] }); setShowForm(false); setForm({ name: '', owner_email: '', plan_name: 'Starter', status: 'active', slug: '' }); setSlugManuallyEdited(false); },
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Company.update(id, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['master-companies'] }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => base44.entities.Company.delete(id),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['master-companies'] }); setConfirmDeleteId(null); },
   });
 
   const active = companies.filter(c => c.status === 'active').length;
@@ -136,6 +155,23 @@ export default function MasterPanel() {
                         className={`text-xs px-2 py-1 rounded-lg font-medium transition-colors ${c.status === 'active' ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-green-50 text-green-600 hover:bg-green-100'}`}>
                         {c.status === 'active' ? 'Bloquear' : 'Ativar'}
                       </button>
+                      {confirmDeleteId === c.id ? (
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => deleteMutation.mutate(c.id)} disabled={deleteMutation.isPending}
+                            className="text-xs px-2 py-1 rounded-lg font-medium bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50">
+                            Confirmar
+                          </button>
+                          <button onClick={() => setConfirmDeleteId(null)}
+                            className="text-xs px-2 py-1 rounded-lg font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
+                            Não
+                          </button>
+                        </div>
+                      ) : (
+                        <button onClick={() => setConfirmDeleteId(c.id)}
+                          className="text-xs px-2 py-1 rounded-lg font-medium bg-gray-100 text-gray-500 hover:bg-red-50 hover:text-red-600 transition-colors flex items-center gap-1">
+                          <Trash2 className="w-3 h-3" />Excluir
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -149,23 +185,31 @@ export default function MasterPanel() {
       </div>
 
       {showForm && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowForm(false)}>
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => { setShowForm(false); setSlugManuallyEdited(false); }}>
           <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <h3 className="font-bold text-[#1B1C1E]">Nova Empresa Cliente</h3>
-              <button onClick={() => setShowForm(false)}><X className="w-5 h-5" /></button>
+              <button onClick={() => { setShowForm(false); setSlugManuallyEdited(false); }}><X className="w-5 h-5" /></button>
             </div>
             <div className="space-y-4">
-              {[
-                { label: 'Nome da barbearia *', key: 'name', type: 'text' },
-                { label: 'E-mail do responsável', key: 'owner_email', type: 'email' },
-              ].map(f => (
-                <div key={f.key}>
-                  <label className="text-xs font-semibold text-gray-500 block mb-1">{f.label}</label>
-                  <input type={f.type} value={form[f.key]} onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
-                    className="w-full px-3 py-2.5 border border-black/10 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3A4B]/20" />
+              <div>
+                <label className="text-xs font-semibold text-gray-500 block mb-1">Nome da barbearia *</label>
+                <input type="text" value={form.name} onChange={e => handleNameChange(e.target.value)}
+                  className="w-full px-3 py-2.5 border border-black/10 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3A4B]/20" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-500 block mb-1">Slug (link de agendamento) *</label>
+                <div className="flex items-center border border-black/10 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-[#1B3A4B]/20">
+                  <span className="px-2 py-2.5 text-xs text-gray-400 bg-gray-50 border-r border-black/10 whitespace-nowrap">/agendar/</span>
+                  <input type="text" value={form.slug} onChange={e => handleSlugChange(e.target.value)}
+                    className="flex-1 px-2 py-2.5 text-sm focus:outline-none" placeholder="minha-barbearia" />
                 </div>
-              ))}
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-500 block mb-1">E-mail do responsável</label>
+                <input type="email" value={form.owner_email} onChange={e => setForm(p => ({ ...p, owner_email: e.target.value }))}
+                  className="w-full px-3 py-2.5 border border-black/10 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3A4B]/20" />
+              </div>
               <div>
                 <label className="text-xs font-semibold text-gray-500 block mb-1">Plano</label>
                 <select value={form.plan_name} onChange={e => setForm(p => ({ ...p, plan_name: e.target.value }))}
@@ -177,8 +221,8 @@ export default function MasterPanel() {
               </div>
             </div>
             <div className="flex gap-3 mt-5">
-              <button onClick={() => setShowForm(false)} className="flex-1 px-4 py-2.5 border border-black/10 rounded-lg text-sm font-medium">Cancelar</button>
-              <button onClick={() => createMutation.mutate(form)} disabled={!form.name}
+              <button onClick={() => { setShowForm(false); setSlugManuallyEdited(false); }} className="flex-1 px-4 py-2.5 border border-black/10 rounded-lg text-sm font-medium">Cancelar</button>
+              <button onClick={() => createMutation.mutate(form)} disabled={!form.name || !form.slug}
                 className="flex-1 px-4 py-2.5 bg-[#1B3A4B] text-white rounded-lg text-sm font-semibold hover:bg-[#1B3A4B]/90 disabled:opacity-50">Criar empresa</button>
             </div>
           </div>
