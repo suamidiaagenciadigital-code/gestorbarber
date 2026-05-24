@@ -59,6 +59,7 @@ export default function PublicBooking() {
   const createApptMutation = useMutation({
     mutationFn: (data) => base44.entities.Appointment.create(data),
     onSuccess: (result) => setBookingDone(result),
+    onError: (err) => setFormError('Erro ao confirmar agendamento. Tente novamente. ' + (err?.message || '')),
   });
 
   const primaryColor = company?.primary_color || '#1B3A4B';
