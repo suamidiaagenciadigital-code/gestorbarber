@@ -45,6 +45,11 @@ export default function AppLayout({ children }) {
     return <Navigate to="/master" replace />;
   }
 
+  // New customer who hasn't finished onboarding → send to onboarding wizard
+  if (!isSuperAdmin && !loadingCompany && company && !company.onboarding_completed) {
+    return <Navigate to="/onboarding" replace />;
+  }
+
   useEffect(() => {
     const companyName = company?.name;
     document.title = companyName ? `${companyName} | Gestor Barber` : 'Gestor Barber';

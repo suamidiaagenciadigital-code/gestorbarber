@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
+import { useAuth } from '@/lib/AuthContext';
 import { Scissors, Eye, EyeOff } from 'lucide-react';
 
 export default function AdminLogin() {
   const navigate = useNavigate();
+  const { setAdminSession } = useAuth();
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [showSenha, setShowSenha] = useState(false);
@@ -25,7 +27,7 @@ export default function AdminLogin() {
       setLoading(false);
       if (res.data?.success) {
         const { user, company } = res.data;
-        localStorage.setItem('admin_session', JSON.stringify({ user, company }));
+        setAdminSession({ user, company });
         if (user.forcar_troca_senha) {
           navigate('/admin/trocar-senha');
         } else {
