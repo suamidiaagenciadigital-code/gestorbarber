@@ -2,7 +2,9 @@ import AppLayout from '@/components/layout/AppLayout';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { useCompany } from '@/hooks/useCompany';
+import { usePlan } from '@/hooks/usePlan';
 import { Zap } from 'lucide-react';
+import PlanGate from '@/components/PlanGate';
 
 import ActionCards from '@/components/aigrowth/ActionCards';
 import RevenueChart from '@/components/aigrowth/RevenueChart';
@@ -11,6 +13,11 @@ import VIPCustomers from '@/components/aigrowth/VIPCustomers';
 
 export default function AppAIGrowth() {
   const { company, companyId, isLoading: loadingCompany } = useCompany();
+  const { plan } = usePlan();
+
+  if (!plan.aiGrowth) {
+    return <AppLayout><PlanGate feature="AI Growth Engine" requiredPlan="Profissional" /></AppLayout>;
+  }
 
   const { data: customers = [], isLoading: loadingCustomers } = useQuery({
     queryKey: ['customers', companyId],

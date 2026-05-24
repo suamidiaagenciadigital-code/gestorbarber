@@ -2,18 +2,22 @@ import AppLayout from '@/components/layout/AppLayout';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCompany } from '@/hooks/useCompany';
+import { usePlan } from '@/hooks/usePlan';
 import { useState } from 'react';
-import { Plus, X, UserCheck, Mail } from 'lucide-react';
+import { Plus, X, Lock } from 'lucide-react';
+import UpgradeModal from '@/components/UpgradeModal';
 
 const roleLabels = { admin: 'Admin', recepcao: 'Recepção', barbeiro: 'Barbeiro', financeiro: 'Financeiro' };
 const roleColors = { admin: 'bg-purple-100 text-purple-700', recepcao: 'bg-blue-100 text-blue-700', barbeiro: 'bg-green-100 text-green-700', financeiro: 'bg-yellow-100 text-yellow-700' };
 
 export default function AppEquipe() {
   const [showForm, setShowForm] = useState(false);
+  const [showUpgrade, setShowUpgrade] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', role: 'recepcao', active: true });
   const queryClient = useQueryClient();
 
-  const { company, companyId } = useCompany();
+  const { companyId } = useCompany();
+  const { plan, planName } = usePlan();
 
   const { data: team = [] } = useQuery({
     queryKey: ['team', companyId],
@@ -23,7 +27,11 @@ export default function AppEquipe() {
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.TeamMember.create({ ...data, company_id: companyId }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['team', companyId] }); setShowForm(false); setForm({ name: '', email: '', role: 'recepcao', active: true }); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['team', companyId] });
+      setShowForm(false);
+      setForm({ name: '', email: '', role: 'recepcao', active: true });
+    },
   });
 
   const updateMutation = useMutation({
@@ -31,16 +39,29 @@ export default function AppEquipe() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['team', companyId] }),
   });
 
+  const atLimit = team.length >= plan.maxTeamMembers;
+
+  const handleAddClick = () => {
+    if (atLimit) { setShowUpgrade(true); return; }
+    setShowForm(true);
+  };
+
   return (
     <AppLayout>
       <div className="p-8">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-black text-[#1B1C1E]">Equipe</h1>
-            <p className="text-gray-500 text-sm mt-1">{team.length} membros cadastrados</p>
+            <p className="text-gray-500 text-sm mt-1">
+              {team.length} {plan.maxTeamMembers === Infinity ? 'membros' : `/ ${plan.maxTeamMembers} membros`} · plano {planName}
+            </p>
           </div>
-          <button onClick={() => setShowForm(true)} className="bg-[#1B3A4B] text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-[#1B3A4B]/90 transition-colors flex items-center gap-2">
-            <Plus className="w-4 h-4" />Convidar membro
+          <button
+            onClick={handleAddClick}
+            className="bg-[#1B3A4B] text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-[#1B3A4B]/90 transition-colors flex items-center gap-2"
+          >
+            {atLimit ? <Lock className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+            Convidar membro
           </button>
         </div>
 
@@ -72,8 +93,10 @@ export default function AppEquipe() {
                     </span>
                   </td>
                   <td className="p-4">
-                    <button onClick={() => updateMutation.mutate({ id: m.id, data: { active: !m.active } })}
-                      className={`text-xs font-medium px-2 py-1 rounded-lg cursor-pointer ${m.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                    <button
+                      onClick={() => updateMutation.mutate({ id: m.id, data: { active: !m.active } })}
+                      className={`text-xs font-medium px-2 py-1 rounded-lg cursor-pointer ${m.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}
+                    >
                       {m.active ? 'Ativo' : 'Inativo'}
                     </button>
                   </td>
@@ -117,11 +140,21 @@ export default function AppEquipe() {
               </div>
               <div className="flex gap-3 mt-5">
                 <button onClick={() => setShowForm(false)} className="flex-1 px-4 py-2.5 border border-black/10 rounded-lg text-sm font-medium">Cancelar</button>
-                <button onClick={() => createMutation.mutate(form)} disabled={!form.name || !form.email}
-                  className="flex-1 px-4 py-2.5 bg-[#1B3A4B] text-white rounded-lg text-sm font-semibold hover:bg-[#1B3A4B]/90 disabled:opacity-50">Salvar</button>
+                <button onClick={() => createMutation.mutate(form)} disabled={!form.name || !form.email || createMutation.isPending}
+                  className="flex-1 px-4 py-2.5 bg-[#1B3A4B] text-white rounded-lg text-sm font-semibold hover:bg-[#1B3A4B]/90 disabled:opacity-50">
+                  {createMutation.isPending ? 'Salvando...' : 'Salvar'}
+                </button>
               </div>
             </div>
           </div>
+        )}
+
+        {showUpgrade && (
+          <UpgradeModal
+            onClose={() => setShowUpgrade(false)}
+            requiredPlan={plan.upgradeFor?.extraTeam ?? 'Profissional'}
+            featureLabel="Mais membros na equipe"
+          />
         )}
       </div>
     </AppLayout>

@@ -75,8 +75,10 @@ export default function PublicBooking() {
     if (!selected.date || !selected.service || !company) return [];
     const dayKey = DAY_MAP[selected.date.getDay()];
     const hours = company.business_hours?.[dayKey];
-    if (!hours?.active) return [];
-    const slots = generateTimeSlots(hours.open || '09:00', hours.close || '19:00', selected.service.duration_minutes || 30);
+    // If no hours configured, use sensible defaults (Mon–Sat 9h–19h)
+    const effectiveHours = hours ?? (dayKey !== 'dom' ? { active: true, open: '09:00', close: '19:00' } : { active: false });
+    if (!effectiveHours.active) return [];
+    const slots = generateTimeSlots(effectiveHours.open || '09:00', effectiveHours.close || '19:00', selected.service.duration_minutes || 30);
 
     return slots.filter(time => {
       const [h, m] = time.split(':');

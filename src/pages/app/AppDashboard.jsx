@@ -3,7 +3,8 @@ import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { useCompany } from '@/hooks/useCompany';
 import { useState, useEffect } from 'react';
-import { Calendar, Users, DollarSign, CheckCircle, TrendingUp, Clock, AlertCircle, X, AlertTriangle, Zap, Globe, Copy } from 'lucide-react';
+import { Calendar, Users, DollarSign, CheckCircle, TrendingUp, Clock, AlertCircle, X, AlertTriangle, Zap, Globe, Copy, Star } from 'lucide-react';
+import { usePlan } from '@/hooks/usePlan';
 import { format, startOfDay, endOfDay, startOfMonth, isToday, differenceInMinutes, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
@@ -19,6 +20,7 @@ const statusConfig = {
 
 export default function AppDashboard() {
   const { company, companyId, isLoading: loadingCompany } = useCompany();
+  const { planName } = usePlan();
   const [alerts, setAlerts] = useState([]);
   const [dismissedAlerts, setDismissedAlerts] = useState(new Set());
 
@@ -166,7 +168,12 @@ export default function AppDashboard() {
     <AppLayout>
       <div className="p-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-black text-[#1B1C1E]">Dashboard</h1>
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-2xl font-black text-[#1B1C1E]">Dashboard</h1>
+            <span className="inline-flex items-center gap-1 bg-[#C89B3C]/15 text-[#8B6914] text-xs font-bold px-2.5 py-1 rounded-full">
+              <Star className="w-3 h-3" /> {planName}
+            </span>
+          </div>
           <p className="text-gray-500 text-sm mt-1">{format(now, "EEEE, d 'de' MMMM", { locale: ptBR })} · {company?.name || 'Sua barbearia'}</p>
         </div>
 

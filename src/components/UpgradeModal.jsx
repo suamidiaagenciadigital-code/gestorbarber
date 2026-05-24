@@ -1,29 +1,71 @@
 import { X, Lock, ArrowRight, CheckCircle } from 'lucide-react';
+import { useState } from 'react';
+import { supabase } from '@/lib/supabase';
+import { useCompany } from '@/hooks/useCompany';
 
 const PLAN_PERKS = {
   Profissional: [
-    'Até 5 barbeiros na equipe',
+    'Até 3 membros na equipe',
+    'Até 5 barbeiros cadastrados',
     'Controle de comissões por profissional',
     'Histórico completo de clientes',
     'Relatórios de atendimentos e faturamento',
-    'Painel com indicadores da barbearia',
+    'AI Growth Engine com insights reais',
     'Suporte prioritário',
   ],
   Premium: [
-    'Barbeiros ilimitados',
-    'Gestão avançada de unidades',
+    'Membros de equipe ilimitados',
+    'Barbeiros ilimitados com agenda própria',
+    'Gestão avançada de múltiplas unidades',
     'Relatórios completos de desempenho',
     'Controle de clientes recorrentes',
-    'Recursos para fidelização',
-    'Acompanhamento de metas e resultados',
+    'Recursos avançados de fidelização',
     'Suporte premium',
   ],
 };
 
 const PLAN_PRICE = { Profissional: 'R$ 99,00/mês', Premium: 'R$ 149,00/mês' };
+const PRICE_IDS = {
+  Profissional: 'price_1TafFOPURVRGZqbhsswycG79',
+  Premium: 'price_1TafGoPURVRGZqbh2VPtKKEH',
+};
 
 export default function UpgradeModal({ onClose, requiredPlan = 'Profissional', featureLabel = 'este recurso' }) {
+  const { companyId } = useCompany();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const perks = PLAN_PERKS[requiredPlan] ?? [];
+
+  const handleUpgrade = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const origin = window.location.origin;
+      const { data, error: fnErr } = await supabase.functions.invoke('create-checkout-session', {
+        body: {
+          company_id: companyId,
+          plan_name: requiredPlan,
+          success_url: `${origin}/app/dashboard?upgraded=true`,
+          cancel_url: window.location.href,
+        },
+      });
+
+      if (fnErr || !data?.checkout_url) {
+        let msg = 'Erro ao iniciar pagamento. Tente novamente.';
+        try {
+          const b = await fnErr?.context?.json?.();
+          if (b?.error) msg = b.error;
+        } catch {}
+        setError(msg);
+        setLoading(false);
+        return;
+      }
+      window.location.href = data.checkout_url;
+    } catch (e) {
+      setError(e.message || 'Erro inesperado.');
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4" onClick={onClose}>
@@ -54,15 +96,20 @@ export default function UpgradeModal({ onClose, requiredPlan = 'Profissional', f
               </li>
             ))}
           </ul>
-          <p className="text-xs text-gray-400 mb-4 text-center">Entre em contato para fazer upgrade do seu plano</p>
-          <a
-            href="https://wa.me/5500000000000?text=Quero+fazer+upgrade+do+meu+plano+GestorBarber"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full bg-[#1B3A4B] text-white rounded-xl py-3 text-sm font-semibold flex items-center justify-center gap-2 hover:bg-[#1B3A4B]/90 transition-colors"
+
+          {error && (
+            <p className="text-xs text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-lg mb-3">{error}</p>
+          )}
+
+          <button
+            onClick={handleUpgrade}
+            disabled={loading || !companyId}
+            className="w-full bg-[#C89B3C] text-[#111111] rounded-xl py-3 text-sm font-bold flex items-center justify-center gap-2 hover:bg-[#B8892F] transition-colors disabled:opacity-60"
           >
-            Fazer upgrade agora <ArrowRight className="w-4 h-4" />
-          </a>
+            {loading ? 'Redirecionando...' : 'Fazer upgrade agora'}
+            {!loading && <ArrowRight className="w-4 h-4" />}
+          </button>
+          <p className="text-xs text-gray-400 text-center mt-3">Pagamento seguro via Stripe</p>
         </div>
       </div>
     </div>

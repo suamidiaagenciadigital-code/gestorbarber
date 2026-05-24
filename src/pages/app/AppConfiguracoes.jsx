@@ -1,9 +1,9 @@
 import AppLayout from '@/components/layout/AppLayout';
 import { base44 } from '@/api/base44Client';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '@/lib/AuthContext';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useCompany } from '@/hooks/useCompany';
 import { useState, useEffect } from 'react';
-import { Save, Globe, Copy, CheckCircle } from 'lucide-react';
+import { Save, Globe, Copy, CheckCircle, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 
 const DAYS = [
@@ -16,26 +16,23 @@ const defaultHours = Object.fromEntries(DAYS.map(d => [d.key, { open: '09:00', c
 
 export default function AppConfiguracoes() {
   const { toast } = useToast();
-  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [copied, setCopied] = useState(false);
+  const [ready, setReady] = useState(false);
 
-  const { data: companies = [] } = useQuery({
-    queryKey: ['companies'],
-    queryFn: () => base44.entities.Company.list(),
-  });
-
-  const company = companies.find(c => c.owner_email === user?.email) || companies[0];
+  const { company, companyId, isLoading } = useCompany();
 
   const [form, setForm] = useState({
-    name: '', slug: '', phone: '', whatsapp: '', address: '', primary_color: '#1B3A4B', business_hours: defaultHours,
+    name: '', slug: '', phone: '', whatsapp: '', address: '',
+    primary_color: '#1B3A4B', business_hours: defaultHours,
     retention_interval_days: 30,
   });
 
+  // Populate form when company data arrives — only once per company load
   useEffect(() => {
-    if (company) {
+    if (company && !ready) {
       setForm({
-        name: company.name || '',
+        name: company.name || company.nome_fantasia || '',
         slug: company.slug || '',
         phone: company.phone || '',
         whatsapp: company.whatsapp || '',
@@ -44,22 +41,22 @@ export default function AppConfiguracoes() {
         business_hours: company.business_hours || defaultHours,
         retention_interval_days: company.retention_interval_days || 30,
       });
+      setReady(true);
     }
-  }, [company]);
-
-  const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Company.create(data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['companies'] }); toast({ title: 'Configurações salvas!' }); },
-  });
+  }, [company, ready]);
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Company.update(id, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['companies'] }); toast({ title: 'Configurações salvas!' }); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['company', companyId] });
+      toast({ title: 'Configurações salvas!' });
+    },
+    onError: (e) => toast({ title: 'Erro ao salvar', description: e?.message, variant: 'destructive' }),
   });
 
   const handleSave = () => {
-    if (company) updateMutation.mutate({ id: company.id, data: form });
-    else createMutation.mutate(form);
+    if (!companyId) return;
+    updateMutation.mutate({ id: companyId, data: form });
   };
 
   const publicLink = `${window.location.origin}/agendar/${form.slug || 'sua-barbearia'}`;
@@ -73,6 +70,16 @@ export default function AppConfiguracoes() {
   const setHour = (day, field, val) => {
     setForm(p => ({ ...p, business_hours: { ...p.business_hours, [day]: { ...p.business_hours[day], [field]: val } } }));
   };
+
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center py-32">
+          <Loader2 className="w-8 h-8 animate-spin text-[#C89B3C]" />
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
@@ -141,9 +148,7 @@ export default function AppConfiguracoes() {
               <div>
                 <label className="text-xs font-semibold text-gray-500 block mb-1">Intervalo de inatividade (dias)</label>
                 <input
-                  type="number"
-                  min={7}
-                  max={365}
+                  type="number" min={7} max={365}
                   value={form.retention_interval_days}
                   onChange={e => setForm(p => ({ ...p, retention_interval_days: parseInt(e.target.value) || 30 }))}
                   className="w-32 px-3 py-2.5 border border-black/10 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3A4B]/20"
@@ -186,10 +191,10 @@ export default function AppConfiguracoes() {
         </div>
 
         <div className="mt-6">
-          <button onClick={handleSave}
-            className="flex items-center gap-2 bg-[#1B3A4B] text-white px-6 py-3 rounded-xl font-semibold hover:bg-[#1B3A4B]/90 transition-colors">
-            <Save className="w-4 h-4" />
-            Salvar configurações
+          <button onClick={handleSave} disabled={updateMutation.isPending || !companyId}
+            className="flex items-center gap-2 bg-[#1B3A4B] text-white px-6 py-3 rounded-xl font-semibold hover:bg-[#1B3A4B]/90 transition-colors disabled:opacity-60">
+            {updateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {updateMutation.isPending ? 'Salvando...' : 'Salvar configurações'}
           </button>
         </div>
       </div>
