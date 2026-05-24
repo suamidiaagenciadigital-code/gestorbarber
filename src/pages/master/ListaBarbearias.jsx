@@ -112,8 +112,8 @@ export default function ListaBarbearias() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Link to="/" className="text-xs text-white/60 hover:text-white">← LP</Link>
-          <Link to="/app/dashboard" className="text-xs text-white/60 hover:text-white">App →</Link>
+          <Link to="/master/financeiro" className="text-xs text-white/60 hover:text-white">Financeiro</Link>
+          <Link to="/master" className="text-xs text-white/60 hover:text-white">← Master</Link>
         </div>
       </header>
 

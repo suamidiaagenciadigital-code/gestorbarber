@@ -74,6 +74,8 @@ export default function MasterPanel() {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <Link to="/master/barbearias" className="text-xs text-white/60 hover:text-white">Barbearias</Link>
+          <Link to="/master/financeiro" className="text-xs text-white/60 hover:text-white">Financeiro</Link>
           <Link to="/" className="text-xs text-white/60 hover:text-white">← LP Pública</Link>
           {companies[0]?.slug && (
             <Link to={`/app/dashboard?slug=${companies[0].slug}`} className="text-xs text-white/60 hover:text-white">App →</Link>
