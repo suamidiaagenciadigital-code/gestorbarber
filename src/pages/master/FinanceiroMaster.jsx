@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { TrendingUp, Users, Clock, AlertCircle, DollarSign } from 'lucide-react';
+import { TrendingUp, Users, Clock, AlertCircle, DollarSign, Play } from 'lucide-react';
 
 const PLAN_PRICE = { starter: 59, pro: 99, premium: 149 };
 const PLAN_LABEL = { starter: 'Essencial', pro: 'Profissional', premium: 'Premium' };
@@ -46,6 +46,21 @@ function PlanBar({ label, count, total, mrr, color }) {
 export default function FinanceiroMaster() {
   const [filtroPlano, setFiltroPlano] = useState('');
   const [filtroStatus, setFiltroStatus] = useState('');
+  const [testResult, setTestResult] = useState(null);
+  const [testing, setTesting] = useState(false);
+
+  async function runFollowupTest() {
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const res = await base44.functions.invoke('paymentFollowup', { origin: window.location.origin });
+      setTestResult({ ok: true, data: res.data });
+    } catch (e) {
+      setTestResult({ ok: false, error: String(e) });
+    } finally {
+      setTesting(false);
+    }
+  }
 
   const { data: companies = [], isLoading } = useQuery({
     queryKey: ['master-financeiro-companies'],
@@ -112,6 +127,14 @@ export default function FinanceiroMaster() {
           </div>
         </div>
         <div className="flex items-center gap-4">
+          <button
+            onClick={runFollowupTest}
+            disabled={testing}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-semibold disabled:opacity-60 transition-colors"
+            style={{ background: 'rgba(200,155,60,0.2)', color: '#C89B3C' }}>
+            <Play className="w-3 h-3" />
+            {testing ? 'Executando...' : 'Testar follow-up'}
+          </button>
           <Link to="/master/barbearias" className="text-xs text-white/60 hover:text-white">Barbearias</Link>
           <Link to="/master" className="text-xs text-white/60 hover:text-white">← Master</Link>
         </div>
@@ -126,6 +149,17 @@ export default function FinanceiroMaster() {
           <StatCard icon={AlertCircle} label="Aguardando" value={pending.length} sub="pagamento pendente" highlight={pending.length > 0} color="#d97706" />
           <StatCard icon={TrendingUp} label="Conversão" value={`${conversionRate}%`} sub="trials → pagantes" color="#1B3A4B" />
         </div>
+
+        {/* Resultado do teste de follow-up */}
+        {testResult && (
+          <div className={`rounded-2xl border p-5 text-sm font-mono ${testResult.ok ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-700'}`}>
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-bold text-base font-sans">{testResult.ok ? '✅ Follow-up executado' : '❌ Erro'}</span>
+              <button onClick={() => setTestResult(null)} className="text-xs opacity-60 hover:opacity-100 font-sans">fechar</button>
+            </div>
+            <pre className="whitespace-pre-wrap text-xs">{JSON.stringify(testResult.ok ? testResult.data : testResult.error, null, 2)}</pre>
+          </div>
+        )}
 
         {/* MRR por plano + alerta vencimento */}
         <div className="grid md:grid-cols-2 gap-6">
