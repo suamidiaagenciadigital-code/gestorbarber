@@ -53,6 +53,18 @@ async function throwIfError(resp) {
   }
 }
 
+/**
+ * Convert empty strings to null so that UUID / numeric columns don't get
+ * invalid input (e.g. category_id: "" → category_id: null).
+ */
+function sanitize(payload) {
+  const out = {};
+  for (const [k, v] of Object.entries(payload)) {
+    out[k] = v === '' ? null : v;
+  }
+  return out;
+}
+
 // base44 entity name → Supabase table name
 const TABLE_MAP = {
   Company:         'companies',
@@ -105,7 +117,7 @@ function makeEntity(entityName) {
       const resp = await fetch(base, {
         method:  'POST',
         headers: headers({ Prefer: 'return=representation' }),
-        body:    JSON.stringify(payload),
+        body:    JSON.stringify(sanitize(payload)),
       });
       await throwIfError(resp);
       const rows = await resp.json();
@@ -117,7 +129,7 @@ function makeEntity(entityName) {
       const resp = await fetch(`${base}?id=eq.${id}`, {
         method:  'PATCH',
         headers: headers({ Prefer: 'return=representation' }),
-        body:    JSON.stringify(payload),
+        body:    JSON.stringify(sanitize(payload)),
       });
       await throwIfError(resp);
       const rows = await resp.json();
