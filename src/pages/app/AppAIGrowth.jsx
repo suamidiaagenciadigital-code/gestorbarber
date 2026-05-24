@@ -15,33 +15,35 @@ export default function AppAIGrowth() {
   const { company, companyId, isLoading: loadingCompany } = useCompany();
   const { plan } = usePlan();
 
-  if (!plan.aiGrowth) {
-    return <AppLayout><PlanGate feature="AI Growth Engine" requiredPlan="Profissional" /></AppLayout>;
-  }
-
+  // All hooks must be called before any conditional return
   const { data: customers = [], isLoading: loadingCustomers } = useQuery({
     queryKey: ['customers', companyId],
     queryFn: () => base44.entities.Customer.filter({ company_id: companyId }),
-    enabled: !!companyId,
+    enabled: !!companyId && !!plan.aiGrowth,
   });
 
   const { data: appointments = [], isLoading: loadingAppts } = useQuery({
     queryKey: ['appointments', companyId],
     queryFn: () => base44.entities.Appointment.filter({ company_id: companyId }),
-    enabled: !!companyId,
+    enabled: !!companyId && !!plan.aiGrowth,
   });
 
   const { data: services = [] } = useQuery({
     queryKey: ['services', companyId],
     queryFn: () => base44.entities.Service.filter({ company_id: companyId }),
-    enabled: !!companyId,
+    enabled: !!companyId && !!plan.aiGrowth,
   });
 
   const { data: professionals = [] } = useQuery({
     queryKey: ['professionals', companyId],
     queryFn: () => base44.entities.Professional.filter({ company_id: companyId }),
-    enabled: !!companyId,
+    enabled: !!companyId && !!plan.aiGrowth,
   });
+
+  // Plan gate after all hooks
+  if (!plan.aiGrowth) {
+    return <AppLayout><PlanGate feature="AI Growth Engine" requiredPlan="Profissional" /></AppLayout>;
+  }
 
   const isLoading = loadingCompany || loadingCustomers || loadingAppts;
 
@@ -49,7 +51,6 @@ export default function AppAIGrowth() {
     <AppLayout>
       <div className="p-6 md:p-8 max-w-7xl">
 
-        {/* Header */}
         <div className="flex items-start justify-between mb-8">
           <div>
             <div className="flex items-center gap-3 mb-1">
@@ -70,8 +71,6 @@ export default function AppAIGrowth() {
           </div>
         ) : (
           <div className="space-y-8">
-
-            {/* 1. Action Cards — o mais importante, topo da página */}
             <ActionCards
               company={company}
               customers={customers}
@@ -79,16 +78,11 @@ export default function AppAIGrowth() {
               services={services}
               professionals={professionals}
             />
-
-            {/* 2. Faturamento + Top Serviços */}
             <div className="grid lg:grid-cols-2 gap-6">
               <RevenueChart appointments={appointments} />
               <TopServices appointments={appointments} />
             </div>
-
-            {/* 3. VIPs */}
             <VIPCustomers customers={customers} appointments={appointments} />
-
           </div>
         )}
       </div>
