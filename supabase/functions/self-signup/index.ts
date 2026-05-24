@@ -29,7 +29,7 @@ Deno.serve(async (req: Request) => {
   );
 
   const body = await req.json();
-  const { barbershop_name, slug, owner_nome, owner_email, password, plan_name } = body;
+  const { barbershop_name, slug, owner_nome, owner_email, password, plan_name, test_mode } = body;
 
   if (!barbershop_name || !slug || !owner_email || !password) {
     return Response.json({ error: 'Campos obrigatórios ausentes.' }, { status: 400, headers: corsHeaders });
@@ -53,8 +53,9 @@ Deno.serve(async (req: Request) => {
   }
 
   const normalizedPlan = plan_name || 'Essencial';
+  const isTestMode = test_mode === true;
 
-  // Create company as pending_payment
+  // Create company (active in test mode, pending_payment otherwise)
   const { data: company, error: companyErr } = await supabase.from('companies').insert({
     name: barbershop_name,
     nome_fantasia: barbershop_name,
@@ -62,8 +63,8 @@ Deno.serve(async (req: Request) => {
     owner_email,
     owner_nome: owner_nome || null,
     plan_name: normalizedPlan,
-    status: 'pending_payment',
-    status_cobranca: 'aguardando_pagamento',
+    status: isTestMode ? 'active' : 'pending_payment',
+    status_cobranca: isTestMode ? 'teste' : 'aguardando_pagamento',
     onboarding_completed: false,
     onboarding_step: 1,
   }).select().single();

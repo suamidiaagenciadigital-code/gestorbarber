@@ -71,6 +71,8 @@ export default function Cadastrar() {
     setLoading(true);
 
     try {
+      const isTestMode = new URLSearchParams(window.location.search).get('test') === 'true';
+
       // 1. Create account
       const { data: signupData, error: signupErr } = await supabase.functions.invoke('self-signup', {
         body: {
@@ -80,6 +82,7 @@ export default function Cadastrar() {
           owner_email: form.owner_email,
           password: form.password,
           plan_name: plan,
+          test_mode: isTestMode,
         },
       });
 
@@ -89,8 +92,15 @@ export default function Cadastrar() {
         return;
       }
 
-      // 2. Create Stripe Checkout Session
       const origin = window.location.origin;
+
+      if (isTestMode) {
+        // TEST MODE: skip Stripe, go straight to success page
+        window.location.href = `${origin}/cadastrar/sucesso?email=${encodeURIComponent(form.owner_email)}&test=true`;
+        return;
+      }
+
+      // 2. Create Stripe Checkout Session
       const { data: checkoutData, error: checkoutErr } = await supabase.functions.invoke('create-checkout-session', {
         body: {
           company_id: signupData.company_id,
