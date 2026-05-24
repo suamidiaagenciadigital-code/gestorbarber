@@ -217,17 +217,15 @@ export default function PublicBooking() {
             {company.whatsapp && (() => {
               const dataFormatada = selected.date ? format(selected.date, "d 'de' MMMM 'de' yyyy", { locale: ptBR }) : '';
               const msg = [
-                `Olá, ${company.nome_fantasia || company.name}! 👋`,
+                `Olá, ${company.nome_fantasia || company.name}! Gostaria de confirmar meu agendamento:`,
                 ``,
-                `Gostaria de confirmar meu agendamento:`,
-                ``,
-                `👤 Nome: ${form.name}`,
-                `✂️ Serviço: ${selected.service?.name}`,
-                `💈 Profissional: ${selected.professional?.id === 'any' ? 'Qualquer disponível' : selected.professional?.name}`,
-                `📅 Data: ${dataFormatada}`,
-                `🕐 Horário: ${selected.time}`,
-                `💰 Valor: R$ ${selected.service?.price}`,
-                form.notes ? `📝 Obs: ${form.notes}` : '',
+                `Nome: ${form.name}`,
+                `Serviço: ${selected.service?.name}`,
+                `Profissional: ${selected.professional?.id === 'any' ? 'Qualquer disponível' : selected.professional?.name}`,
+                `Data: ${dataFormatada}`,
+                `Horário: ${selected.time}`,
+                `Valor: R$ ${selected.service?.price}`,
+                form.notes ? `Obs: ${form.notes}` : '',
               ].filter(Boolean).join('\n');
               return (
                 <a
