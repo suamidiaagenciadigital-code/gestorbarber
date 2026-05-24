@@ -1,18 +1,57 @@
 /**
- * base44Client — drop-in shim that mirrors the base44 SDK surface
- * using Supabase under the hood.
+ * base44Client — uses plain fetch() against the Supabase PostgREST API.
  *
- * All existing components import `base44` from here and call:
- *   base44.entities.X.filter(filters)
- *   base44.entities.X.list(sortField, limit)
- *   base44.entities.X.create(data)
- *   base44.entities.X.update(id, data)
- *   base44.functions.invoke(name, payload)
- *   base44.integrations.Core.InvokeLLM({ prompt, response_json_schema })
- *   base44.auth.logout()
- *   base44.auth.me()
+ * We intentionally bypass the Supabase JS SDK for all data operations because
+ * SDK v2.49.x calls getSession() internally before every request, and that
+ * call hangs indefinitely in production (deadlock with onAuthStateChange).
+ *
+ * Auth calls (me, logout) still use the Supabase SDK because they're
+ * triggered outside of the deadlock window.
  */
 import { supabase } from '@/lib/supabase';
+
+const SUPABASE_URL      = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+/** Build PostgREST headers, including user JWT when available */
+function headers(extra = {}) {
+  const tokenKey = Object.keys(localStorage).find(
+    k => k.startsWith('sb-') && k.endsWith('-auth-token')
+  );
+  let accessToken = SUPABASE_ANON_KEY;
+  if (tokenKey) {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(tokenKey) || '{}');
+      if (parsed?.access_token) accessToken = parsed.access_token;
+    } catch { /* ignore */ }
+  }
+  return {
+    apikey:        SUPABASE_ANON_KEY,
+    Authorization: `Bearer ${accessToken}`,
+    'Content-Type': 'application/json',
+    Accept:        'application/json',
+    ...extra,
+  };
+}
+
+/** base44 sort field → PostgREST order param */
+function parseSortField(field = '-created_at') {
+  const desc = field.startsWith('-');
+  const col  = field
+    .replace(/^-/, '')
+    .replace('created_date', 'created_at')
+    .replace('updated_date', 'updated_at');
+  return `${col}.${desc ? 'desc' : 'asc'}`;
+}
+
+/** Throw a readable error from a failed PostgREST response */
+async function throwIfError(resp) {
+  if (!resp.ok) {
+    let msg = `HTTP ${resp.status}`;
+    try { const j = await resp.json(); msg = j.message || j.error || msg; } catch { /* ignore */ }
+    throw new Error(msg);
+  }
+}
 
 // base44 entity name → Supabase table name
 const TABLE_MAP = {
@@ -29,74 +68,69 @@ const TABLE_MAP = {
   Lead:            'leads',
 };
 
-// base44 sort field names → Supabase column names
-function parseSortField(field = '-created_at') {
-  const desc = field.startsWith('-');
-  const col  = field
-    .replace(/^-/, '')
-    .replace('created_date', 'created_at')
-    .replace('updated_date', 'updated_at');
-  return { col, ascending: !desc };
-}
-
 function makeEntity(entityName) {
   const table = TABLE_MAP[entityName];
   if (!table) throw new Error(`[base44] Unknown entity: ${entityName}`);
 
+  const base = `${SUPABASE_URL}/rest/v1/${table}`;
+
   return {
     /** Filter rows by exact-match criteria, with optional sort and limit */
     filter: async (filters = {}, sortField = '-created_at', limit = 200) => {
-      const { col, ascending } = parseSortField(sortField);
-      let q = supabase.from(table).select('*');
+      const params = new URLSearchParams();
       for (const [key, val] of Object.entries(filters)) {
         if (val === undefined || val === null) continue;
-        q = q.eq(key, val);
+        params.append(key, `eq.${val}`);
       }
-      q = q.order(col, { ascending }).limit(limit);
-      const { data, error } = await q;
-      if (error) throw error;
-      return data ?? [];
+      params.append('order', parseSortField(sortField));
+      params.append('limit', String(limit));
+      const resp = await fetch(`${base}?${params}`, { headers: headers() });
+      await throwIfError(resp);
+      return resp.json();
     },
 
     /** List all rows, with optional sort & limit */
     list: async (sortField = '-created_at', limit = 100) => {
-      const { col, ascending } = parseSortField(sortField);
-      const { data, error } = await supabase
-        .from(table)
-        .select('*')
-        .order(col, { ascending })
-        .limit(limit);
-      if (error) throw error;
-      return data ?? [];
+      const params = new URLSearchParams({
+        order: parseSortField(sortField),
+        limit: String(limit),
+      });
+      const resp = await fetch(`${base}?${params}`, { headers: headers() });
+      await throwIfError(resp);
+      return resp.json();
     },
 
     /** Create a row and return it */
     create: async (payload) => {
-      const { data, error } = await supabase
-        .from(table)
-        .insert(payload)
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
+      const resp = await fetch(base, {
+        method:  'POST',
+        headers: headers({ Prefer: 'return=representation' }),
+        body:    JSON.stringify(payload),
+      });
+      await throwIfError(resp);
+      const rows = await resp.json();
+      return Array.isArray(rows) ? rows[0] : rows;
     },
 
     /** Update a row by id and return it */
     update: async (id, payload) => {
-      const { data, error } = await supabase
-        .from(table)
-        .update(payload)
-        .eq('id', id)
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
+      const resp = await fetch(`${base}?id=eq.${id}`, {
+        method:  'PATCH',
+        headers: headers({ Prefer: 'return=representation' }),
+        body:    JSON.stringify(payload),
+      });
+      await throwIfError(resp);
+      const rows = await resp.json();
+      return Array.isArray(rows) ? rows[0] : rows;
     },
 
     /** Delete a row by id */
     delete: async (id) => {
-      const { error } = await supabase.from(table).delete().eq('id', id);
-      if (error) throw error;
+      const resp = await fetch(`${base}?id=eq.${id}`, {
+        method:  'DELETE',
+        headers: headers(),
+      });
+      await throwIfError(resp);
     },
   };
 }
@@ -110,7 +144,6 @@ const entities = new Proxy({}, {
 });
 
 // Convert camelCase function name to kebab-case Edge Function name
-// e.g. barbeariaUserActions → barbearia-user-actions
 function toKebab(name) {
   return name.replace(/([A-Z])/g, (_, c) => '-' + c.toLowerCase());
 }
