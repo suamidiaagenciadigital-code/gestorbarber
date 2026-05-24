@@ -14,11 +14,25 @@ const statusCobrancaBadge = {
   suspenso:    'bg-red-100 text-red-600',
   cancelado:   'bg-gray-100 text-gray-500',
 };
-const statusBadge = {
-  active:   'bg-green-100 text-green-700',
-  inactive: 'bg-gray-100 text-gray-400',
-  blocked:  'bg-red-100 text-red-600',
-};
+
+function getPaymentBadge(c) {
+  if (c.observacoes_internas === 'pending_stripe_payment') {
+    return { label: '⏳ Aguardando pagamento', cls: 'bg-yellow-100 text-yellow-700' };
+  }
+  if (c.status === 'blocked') {
+    return { label: '🔴 Suspenso', cls: 'bg-red-100 text-red-600' };
+  }
+  if (c.status === 'inactive') {
+    return { label: '⚫ Inativo', cls: 'bg-gray-100 text-gray-500' };
+  }
+  if (c.status_cobranca === 'trial') {
+    return { label: '🔵 Trial', cls: 'bg-blue-100 text-blue-700' };
+  }
+  if (c.status === 'active' && c.status_cobranca === 'ativo') {
+    return { label: '🟢 Ativo', cls: 'bg-green-100 text-green-700' };
+  }
+  return { label: c.status || 'Inativo', cls: 'bg-gray-100 text-gray-400' };
+}
 
 export default function ListaBarbearias() {
   const navigate = useNavigate();
@@ -68,15 +82,20 @@ export default function ListaBarbearias() {
   }
 
   const filtered = companies.filter(c => {
-    if (filtroStatus && c.status !== filtroStatus) return false;
+    if (filtroStatus === 'aguardando') {
+      if (c.observacoes_internas !== 'pending_stripe_payment') return false;
+    } else if (filtroStatus && c.status !== filtroStatus) {
+      return false;
+    }
     if (filtroPlano && c.plano !== filtroPlano) return false;
     return true;
   });
 
   const stats = {
     total: companies.length,
-    ativas: companies.filter(c => c.status === 'active').length,
+    ativas: companies.filter(c => c.status === 'active' && c.observacoes_internas !== 'pending_stripe_payment').length,
     trial: companies.filter(c => c.status_cobranca === 'trial').length,
+    aguardando: companies.filter(c => c.observacoes_internas === 'pending_stripe_payment').length,
     suspensos: companies.filter(c => c.status === 'blocked').length,
   };
 
@@ -99,15 +118,16 @@ export default function ListaBarbearias() {
       </header>
 
       <div className="p-8">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
           {[
             { label: 'Total', value: stats.total },
             { label: 'Ativas', value: stats.ativas },
             { label: 'Em trial', value: stats.trial },
+            { label: 'Aguardando pagto.', value: stats.aguardando, highlight: stats.aguardando > 0 },
             { label: 'Suspensas', value: stats.suspensos },
           ].map(s => (
-            <div key={s.label} className="bg-white rounded-2xl border border-black/8 p-5">
-              <div className="text-3xl font-black text-[#1B1C1E]">{s.value}</div>
+            <div key={s.label} className={`rounded-2xl border p-5 ${s.highlight ? 'bg-yellow-50 border-yellow-200' : 'bg-white border-black/8'}`}>
+              <div className={`text-3xl font-black ${s.highlight ? 'text-yellow-700' : 'text-[#1B1C1E]'}`}>{s.value}</div>
               <div className="text-xs text-gray-400 mt-1">{s.label}</div>
             </div>
           ))}
@@ -121,6 +141,7 @@ export default function ListaBarbearias() {
                 className="text-xs px-2 py-1.5 border border-black/10 rounded-lg bg-white focus:outline-none">
                 <option value="">Todos status</option>
                 <option value="active">Ativas</option>
+                <option value="aguardando">Aguardando pagamento</option>
                 <option value="blocked">Bloqueadas</option>
                 <option value="inactive">Inativas</option>
               </select>
@@ -180,9 +201,9 @@ export default function ListaBarbearias() {
                         : <span className="text-gray-300">—</span>}
                     </td>
                     <td className="p-4">
-                      <span className={`text-xs font-medium px-2 py-1 rounded-lg ${statusBadge[c.status || 'active']}`}>
-                        {c.status === 'active' ? 'Ativa' : c.status === 'blocked' ? 'Suspensa' : 'Inativa'}
-                      </span>
+                      {(() => { const b = getPaymentBadge(c); return (
+                        <span className={`text-xs font-medium px-2 py-1 rounded-lg ${b.cls}`}>{b.label}</span>
+                      ); })()}
                     </td>
                     <td className="p-4">
                       <div className="flex items-center gap-1.5">
