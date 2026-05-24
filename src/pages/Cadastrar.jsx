@@ -87,7 +87,13 @@ export default function Cadastrar() {
       });
 
       if (signupErr || !signupData?.company_id) {
-        setError(signupData?.error || signupErr?.message || 'Erro ao criar conta.');
+        let msg = 'Erro ao criar conta.';
+        if (signupData?.error) {
+          msg = signupData.error;
+        } else if (signupErr) {
+          try { const b = await signupErr.context?.json?.(); if (b?.error) msg = b.error; } catch {}
+        }
+        setError(msg);
         setLoading(false);
         return;
       }
