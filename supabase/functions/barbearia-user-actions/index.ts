@@ -223,5 +223,21 @@ Deno.serve(async (req: Request) => {
     return Response.json({ success: true }, { headers: corsHeaders });
   }
 
+  // ── lembrete_pagamento ───────────────────────────────────────────
+  if (action === 'lembrete_pagamento') {
+    const { company_id } = body;
+    const origin = body.origin || 'https://gestorbarber.ia.br';
+
+    const res = await supabase.functions.invoke('payment-followup', {
+      body: { action: 'manual', company_id, origin },
+    });
+
+    if (res.error) return Response.json({ error: res.error.message || 'Erro ao enviar lembrete' }, { status: 500, headers: corsHeaders });
+    const data = res.data as any;
+    if (!data?.success) return Response.json({ error: 'Falha ao enviar e-mail' }, { status: 500, headers: corsHeaders });
+
+    return Response.json({ success: true }, { headers: corsHeaders });
+  }
+
   return Response.json({ error: 'Ação desconhecida' }, { status: 400, headers: corsHeaders });
 });

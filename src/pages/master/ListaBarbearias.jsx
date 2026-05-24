@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Scissors, Plus, Globe, ExternalLink, RefreshCw, Mail, Lock, MoreHorizontal, ChevronDown } from 'lucide-react';
+import { Scissors, Plus, Globe, ExternalLink, RefreshCw, Mail, Lock, MoreHorizontal, ChevronDown, MessageCircle, Bell } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -65,6 +65,10 @@ export default function ListaBarbearias() {
     } else if (action === 'reativar') {
       await updateMutation.mutateAsync({ id: company.id, data: { status: 'active', status_cobranca: 'ativo', observacoes_internas: null } });
       showToast('Barbearia reativada.');
+    } else if (action === 'lembrete') {
+      const res = await base44.functions.invoke('barbeariaUserActions', { action: 'lembrete_pagamento', company_id: company.id, origin: window.location.origin });
+      if (res.data?.success) showToast('Lembrete de pagamento enviado por e-mail!');
+      else showToast(res.data?.error || 'Erro ao enviar lembrete', 'error');
     } else if (action === 'reenviar') {
       const res = await base44.functions.invoke('barbeariaUserActions', { action: 'reenviar_credenciais', company_id: company.id, origin: window.location.origin });
       if (res.data?.success) showToast('Credenciais reenviadas por e-mail!');
@@ -221,12 +225,28 @@ export default function ListaBarbearias() {
                             <ChevronDown className="w-3 h-3" />
                           </button>
                           {openMenu === c.id && (
-                            <div className="absolute right-0 top-8 bg-white border border-black/10 rounded-xl shadow-xl z-50 w-52 py-1 text-sm" data-dropdown="true">
+                            <div className="absolute right-0 top-8 bg-white border border-black/10 rounded-xl shadow-xl z-50 w-56 py-1 text-sm" data-dropdown="true">
                               <button onClick={(e) => { e.stopPropagation(); handleAction('editar', c); }} className="flex items-center gap-2 w-full px-4 py-2 hover:bg-gray-50 text-left">Editar</button>
                               {c.status === 'active'
                                 ? <button onClick={(e) => { e.stopPropagation(); handleAction('suspender', c); }} className="flex items-center gap-2 w-full px-4 py-2 hover:bg-red-50 text-red-600 text-left">Suspender</button>
                                 : <button onClick={(e) => { e.stopPropagation(); handleAction('reativar', c); }} className="flex items-center gap-2 w-full px-4 py-2 hover:bg-green-50 text-green-700 text-left">Reativar</button>
                               }
+                              {c.observacoes_internas === 'pending_stripe_payment' && (<>
+                                <div className="border-t border-black/5 my-1" />
+                                <button onClick={(e) => { e.stopPropagation(); handleAction('lembrete', c); }} className="flex items-center gap-2 w-full px-4 py-2 hover:bg-yellow-50 text-yellow-700 text-left">
+                                  <Bell className="w-3 h-3" />Enviar lembrete de pagto.
+                                </button>
+                                {c.whatsapp && (
+                                  <a
+                                    href={`https://wa.me/55${c.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(`Oi! Vi que você ainda não finalizou o pagamento do Gestor Barber. Posso te ajudar com alguma dúvida? 😊`)}`}
+                                    target="_blank" rel="noopener noreferrer"
+                                    onClick={() => setOpenMenu(null)}
+                                    className="flex items-center gap-2 w-full px-4 py-2 hover:bg-green-50 text-green-700 text-left">
+                                    <MessageCircle className="w-3 h-3" />WhatsApp
+                                  </a>
+                                )}
+                                <div className="border-t border-black/5 my-1" />
+                              </>)}
                               <button onClick={(e) => { e.stopPropagation(); handleAction('reenviar', c); }} className="flex items-center gap-2 w-full px-4 py-2 hover:bg-gray-50 text-left">
                                 <Mail className="w-3 h-3" />Reenviar credenciais
                               </button>

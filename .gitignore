@@ -7,7 +7,7 @@ _extracted/
 *.zip
 dados.txt
 entities/
-functions/
+/functions/
 
 # Claude Code settings
 .claude/
@@ -39,3 +39,4 @@ dist-ssr
 
 .env
 .vite
+.vercel
