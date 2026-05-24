@@ -2,8 +2,10 @@ import AppLayout from '@/components/layout/AppLayout';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCompany } from '@/hooks/useCompany';
+import { usePlan } from '@/hooks/usePlan';
 import { useState } from 'react';
-import { Plus, X, Pencil, Scissors, Trash2 } from 'lucide-react';
+import { Plus, X, Pencil, Scissors, Trash2, Lock } from 'lucide-react';
+import UpgradeModal from '@/components/UpgradeModal';
 
 const DAYS = [
   { key: 'seg', label: 'Seg' }, { key: 'ter', label: 'Ter' }, { key: 'qua', label: 'Qua' },
@@ -16,7 +18,9 @@ const emptyForm = { name: '', specialty: '', photo_url: '', active: true, work_s
 
 export default function AppProfissionais() {
   const { companyId, isLoading: loadingCompany } = useCompany();
+  const { plan, planName } = usePlan();
   const [showForm, setShowForm] = useState(false);
+  const [showUpgrade, setShowUpgrade] = useState(null); // null | 'barbers' | 'commissions'
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [tab, setTab] = useState('info'); // 'info' | 'schedule' | 'services'
@@ -98,10 +102,15 @@ export default function AppProfissionais() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-black text-[#1B1C1E]">Profissionais</h1>
-            <p className="text-gray-500 text-sm mt-1">{professionals.length} profissionais cadastrados</p>
+            <p className="text-gray-500 text-sm mt-1">
+              {professionals.length} / {plan.maxBarbers === Infinity ? '∞' : plan.maxBarbers} profissionais · plano {planName}
+            </p>
           </div>
-          <button onClick={() => setShowForm(true)} className="bg-[#1B3A4B] text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-[#1B3A4B]/90 transition-colors flex items-center gap-2">
-            <Plus className="w-4 h-4" />Novo profissional
+          <button
+            onClick={() => professionals.length >= plan.maxBarbers ? setShowUpgrade('barbers') : setShowForm(true)}
+            className="bg-[#1B3A4B] text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-[#1B3A4B]/90 transition-colors flex items-center gap-2">
+            {professionals.length >= plan.maxBarbers ? <Lock className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+            Novo profissional
           </button>
         </div>
 
@@ -109,7 +118,7 @@ export default function AppProfissionais() {
           <div className="bg-white rounded-2xl border border-black/8 p-12 text-center text-gray-400">
             <Scissors className="w-8 h-8 mx-auto mb-3 opacity-40" />
             <p className="text-sm mb-3">Nenhum profissional cadastrado</p>
-            <button onClick={() => setShowForm(true)} className="text-sm font-semibold text-[#1B3A4B] hover:underline">Adicionar primeiro profissional</button>
+            <button onClick={() => professionals.length >= plan.maxBarbers ? setShowUpgrade('barbers') : setShowForm(true)} className="text-sm font-semibold text-[#1B3A4B] hover:underline">Adicionar primeiro profissional</button>
           </div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -187,21 +196,29 @@ export default function AppProfissionais() {
                         placeholder="https://..."
                         className="w-full px-3 py-2.5 border border-black/10 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3A4B]/20" />
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-xs font-semibold text-gray-500 block mb-1">Tipo comissão</label>
-                        <select value={form.commission_type} onChange={e => setForm(p => ({ ...p, commission_type: e.target.value }))}
-                          className="w-full px-3 py-2.5 border border-black/10 rounded-lg text-sm focus:outline-none">
-                          <option value="percent">Porcentagem (%)</option>
-                          <option value="fixed">Valor fixo (R$)</option>
-                        </select>
+                    {plan.commissions ? (
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs font-semibold text-gray-500 block mb-1">Tipo comissão</label>
+                          <select value={form.commission_type} onChange={e => setForm(p => ({ ...p, commission_type: e.target.value }))}
+                            className="w-full px-3 py-2.5 border border-black/10 rounded-lg text-sm focus:outline-none">
+                            <option value="percent">Porcentagem (%)</option>
+                            <option value="fixed">Valor fixo (R$)</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-gray-500 block mb-1">Valor</label>
+                          <input type="number" min="0" value={form.commission_value} onChange={e => setForm(p => ({ ...p, commission_value: +e.target.value }))}
+                            className="w-full px-3 py-2.5 border border-black/10 rounded-lg text-sm focus:outline-none" />
+                        </div>
                       </div>
-                      <div>
-                        <label className="text-xs font-semibold text-gray-500 block mb-1">Valor</label>
-                        <input type="number" min="0" value={form.commission_value} onChange={e => setForm(p => ({ ...p, commission_value: +e.target.value }))}
-                          className="w-full px-3 py-2.5 border border-black/10 rounded-lg text-sm focus:outline-none" />
-                      </div>
-                    </div>
+                    ) : (
+                      <button type="button" onClick={() => { closeForm(); setShowUpgrade('commissions'); }}
+                        className="w-full flex items-center gap-2 px-3 py-2.5 border border-dashed border-[#C89B3C]/50 rounded-lg text-xs text-[#C89B3C] hover:bg-[#C89B3C]/5 transition-colors">
+                        <Lock className="w-3.5 h-3.5" />
+                        Comissões disponíveis no plano Profissional
+                      </button>
+                    )}
                     <label className="flex items-center gap-2 text-sm cursor-pointer">
                       <input type="checkbox" checked={form.active} onChange={e => setForm(p => ({ ...p, active: e.target.checked }))} />
                       Profissional ativo
@@ -270,6 +287,21 @@ export default function AppProfissionais() {
           </div>
         )}
       </div>
+
+      {showUpgrade === 'barbers' && (
+        <UpgradeModal
+          onClose={() => setShowUpgrade(null)}
+          requiredPlan={plan.upgradeFor?.extraBarbers ?? 'Profissional'}
+          featureLabel={`Adicionar mais de ${plan.maxBarbers} profissional${plan.maxBarbers > 1 ? 'is' : ''}`}
+        />
+      )}
+      {showUpgrade === 'commissions' && (
+        <UpgradeModal
+          onClose={() => setShowUpgrade(null)}
+          requiredPlan="Profissional"
+          featureLabel="Controle de comissões"
+        />
+      )}
     </AppLayout>
   );
 }

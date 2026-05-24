@@ -214,9 +214,9 @@ export default function MasterPanel() {
                 <label className="text-xs font-semibold text-gray-500 block mb-1">Plano</label>
                 <select value={form.plan_name} onChange={e => setForm(p => ({ ...p, plan_name: e.target.value }))}
                   className="w-full px-3 py-2.5 border border-black/10 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3A4B]/20">
-                  <option>Starter</option>
-                  <option>Pro</option>
-                  <option>Enterprise</option>
+                  <option value="Essencial">Essencial — R$ 59/mês · 1 barbeiro</option>
+                  <option value="Profissional">Profissional — R$ 99/mês · até 5 barbeiros</option>
+                  <option value="Premium">Premium — R$ 149/mês · ilimitado</option>
                 </select>
               </div>
             </div>

@@ -2,7 +2,9 @@ import AppLayout from '@/components/layout/AppLayout';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { useCompany } from '@/hooks/useCompany';
+import { usePlan } from '@/hooks/usePlan';
 import { useState } from 'react';
+import PlanGate from '@/components/PlanGate';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { startOfMonth, endOfMonth, subMonths, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -11,6 +13,7 @@ const COLORS = ['#1B3A4B', '#2D5C73', '#3D7A96', '#4F9AB8', '#6ABCD0'];
 
 export default function AppRelatorios() {
   const { companyId, isLoading: loadingCompany } = useCompany();
+  const { plan } = usePlan();
   const [period, setPeriod] = useState('this_month');
 
   const { data: appointments = [], isLoading: loadingAppts } = useQuery({
@@ -76,6 +79,14 @@ export default function AppRelatorios() {
         <div className="p-8 flex items-center justify-center min-h-[400px]">
           <div className="w-8 h-8 border-4 border-[#1B3A4B]/20 border-t-[#1B3A4B] rounded-full animate-spin" />
         </div>
+      </AppLayout>
+    );
+  }
+
+  if (!plan.reports) {
+    return (
+      <AppLayout>
+        <PlanGate feature="Relatórios de atendimentos e faturamento" requiredPlan="Profissional" />
       </AppLayout>
     );
   }

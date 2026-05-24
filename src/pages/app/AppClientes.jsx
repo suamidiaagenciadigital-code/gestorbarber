@@ -2,8 +2,9 @@ import AppLayout from '@/components/layout/AppLayout';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCompany } from '@/hooks/useCompany';
+import { usePlan } from '@/hooks/usePlan';
 import { useState } from 'react';
-import { Search, Plus, X, Users, Pencil, Trash2, Phone } from 'lucide-react';
+import { Search, Plus, X, Users, Pencil, Trash2, Phone, Lock } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -17,6 +18,7 @@ const emptyForm = { name: '', phone: '', email: '', notes: '', status: 'active',
 
 export default function AppClientes() {
   const { companyId, isLoading: loadingCompany } = useCompany();
+  const { plan } = usePlan();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
   const [showForm, setShowForm] = useState(false);
@@ -114,6 +116,15 @@ export default function AppClientes() {
           </div>
         </div>
 
+        {!plan.fullHistory && (
+          <div className="mb-4 flex items-center gap-3 bg-[#C89B3C]/10 border border-[#C89B3C]/30 rounded-xl px-4 py-3">
+            <Lock className="w-4 h-4 text-[#C89B3C] shrink-0" />
+            <p className="text-xs text-[#C89B3C] font-medium">
+              Histórico completo de clientes disponível no plano <strong>Profissional</strong>.
+              <a href="https://wa.me/5500000000000?text=Quero+fazer+upgrade" target="_blank" rel="noopener noreferrer" className="underline ml-1">Fazer upgrade</a>
+            </p>
+          </div>
+        )}
         <div className="bg-white rounded-2xl border border-black/8 overflow-hidden">
           {filtered.length > 0 ? (
             <table className="w-full">
@@ -147,10 +158,14 @@ export default function AppClientes() {
                       </div>
                     </td>
                     <td className="p-4 hidden md:table-cell text-sm font-semibold text-[#1B1C1E]">
-                      {getCustomerStats(c.id)}x
+                      {plan.fullHistory
+                        ? `${getCustomerStats(c.id)}x`
+                        : <span className="flex items-center gap-1 text-gray-300"><Lock className="w-3 h-3" />–</span>}
                     </td>
                     <td className="p-4 hidden lg:table-cell text-sm text-gray-500">
-                      {c.last_appointment_at ? format(new Date(c.last_appointment_at), "d MMM yyyy", { locale: ptBR }) : '–'}
+                      {plan.fullHistory
+                        ? (c.last_appointment_at ? format(new Date(c.last_appointment_at), "d MMM yyyy", { locale: ptBR }) : '–')
+                        : <span className="flex items-center gap-1 text-gray-300"><Lock className="w-3 h-3" />–</span>}
                     </td>
                     <td className="p-4">
                       <span className={`text-xs font-medium px-2 py-1 rounded-lg ${statusBadge[c.status || 'active'].color}`}>

@@ -2,8 +2,10 @@ import AppLayout from '@/components/layout/AppLayout';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCompany } from '@/hooks/useCompany';
+import { usePlan } from '@/hooks/usePlan';
 import { useState } from 'react';
 import { TrendingUp, TrendingDown, DollarSign, Plus, X, Filter } from 'lucide-react';
+import PlanGate from '@/components/PlanGate';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -12,6 +14,7 @@ const CATEGORIES_OUT = ['Aluguel', 'Produto/Insumos', 'Equipamento', 'Marketing'
 
 export default function AppFinanceiro() {
   const { companyId, isLoading: loadingCompany } = useCompany();
+  const { plan } = usePlan();
   const [showForm, setShowForm] = useState(false);
   const [period, setPeriod] = useState('this_month'); // 'this_month' | 'last_month' | 'all'
   const [form, setForm] = useState({ type: 'entrada', description: '', amount: '', category: 'Atendimento', date: format(new Date(), 'yyyy-MM-dd'), status: 'confirmado' });
@@ -64,6 +67,14 @@ export default function AppFinanceiro() {
         <div className="p-8 flex items-center justify-center min-h-[400px]">
           <div className="w-8 h-8 border-4 border-[#1B3A4B]/20 border-t-[#1B3A4B] rounded-full animate-spin" />
         </div>
+      </AppLayout>
+    );
+  }
+
+  if (!plan.reports) {
+    return (
+      <AppLayout>
+        <PlanGate feature="Controle financeiro e faturamento" requiredPlan="Profissional" />
       </AppLayout>
     );
   }
