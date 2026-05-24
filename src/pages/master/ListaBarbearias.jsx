@@ -49,7 +49,7 @@ export default function ListaBarbearias() {
       await updateMutation.mutateAsync({ id: company.id, data: { status: 'blocked', status_cobranca: 'suspenso' } });
       showToast('Barbearia suspensa.');
     } else if (action === 'reativar') {
-      await updateMutation.mutateAsync({ id: company.id, data: { status: 'active', status_cobranca: 'ativo' } });
+      await updateMutation.mutateAsync({ id: company.id, data: { status: 'active', status_cobranca: 'ativo', observacoes_internas: null } });
       showToast('Barbearia reativada.');
     } else if (action === 'reenviar') {
       const res = await base44.functions.invoke('barbeariaUserActions', { action: 'reenviar_credenciais', company_id: company.id, origin: window.location.origin });
