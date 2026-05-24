@@ -29,6 +29,7 @@ async function activateCompany(companyId, planName) {
       status: 'active',
       plan_name: planName,
       status_cobranca: 'ativo',
+      observacoes_internas: null,
     }),
   });
   return res.ok;

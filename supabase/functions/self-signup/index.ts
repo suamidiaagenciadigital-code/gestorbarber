@@ -55,7 +55,12 @@ Deno.serve(async (req: Request) => {
   const normalizedPlan = plan_name || 'Essencial';
   const isTestMode = test_mode === true;
 
-  // Create company (active in test mode, pending_payment otherwise)
+  // Map plan name to the legacy 'plano' enum (starter / pro / premium)
+  const planoMap: Record<string, string> = { Essencial: 'starter', Profissional: 'pro', Premium: 'premium' };
+  const plano = planoMap[normalizedPlan] ?? 'starter';
+
+  // Create company — status 'inactive' while awaiting payment, 'active' in test mode.
+  // observacoes_internas is used as a pending-payment marker (no schema change needed).
   const { data: company, error: companyErr } = await supabase.from('companies').insert({
     name: barbershop_name,
     nome_fantasia: barbershop_name,
@@ -63,8 +68,10 @@ Deno.serve(async (req: Request) => {
     owner_email,
     owner_nome: owner_nome || null,
     plan_name: normalizedPlan,
-    status: isTestMode ? 'active' : 'pending_payment',
-    status_cobranca: isTestMode ? 'teste' : 'aguardando_pagamento',
+    plano,
+    status: isTestMode ? 'active' : 'inactive',
+    status_cobranca: 'trial',
+    observacoes_internas: isTestMode ? null : 'pending_stripe_payment',
     onboarding_completed: false,
     onboarding_step: 1,
   }).select().single();
