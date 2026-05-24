@@ -36,6 +36,7 @@ Deno.serve(async (req: Request) => {
     'line_items[0][quantity]': '1',
     success_url: success_url,
     cancel_url: cancel_url || success_url,
+    allow_promotion_codes: 'true',
     'metadata[company_id]': company_id,
     'metadata[plan_name]': plan_name,
     'subscription_data[metadata][company_id]': company_id,

@@ -32,7 +32,11 @@ async function activateCompany(companyId, planName) {
       observacoes_internas: null,
     }),
   });
-  if (!res.ok) return null;
+  if (!res.ok) {
+    const text = await res.text();
+    console.error('[stripe-webhook] activateCompany failed', res.status, text);
+    return null;
+  }
   const rows = await res.json();
   return rows?.[0] ?? null;
 }
@@ -78,13 +82,20 @@ async function sendWelcomeEmail(company, ownerEmail, planName) {
         html,
       }),
     });
+    if (!res.ok) {
+      const text = await res.text();
+      console.error('[stripe-webhook] sendWelcomeEmail failed', res.status, text);
+    }
     return res.ok;
-  } catch {
+  } catch (e) {
+    console.error('[stripe-webhook] sendWelcomeEmail exception', e);
     return false;
   }
 }
 
 export default async function handler(req, res) {
+  console.log('[stripe-webhook] received', req.method, req.url);
+
   if (req.method !== 'POST') {
     return res.status(405).end('Method Not Allowed');
   }
@@ -92,11 +103,21 @@ export default async function handler(req, res) {
   const sig = req.headers['stripe-signature'];
   const secret = process.env.STRIPE_WEBHOOK_SECRET;
 
+  console.log('[stripe-webhook] sig present:', !!sig, '| secret present:', !!secret);
+
+  if (!secret) {
+    console.error('[stripe-webhook] STRIPE_WEBHOOK_SECRET not set');
+    return res.status(500).json({ error: 'Webhook secret not configured' });
+  }
+
   const chunks = [];
   for await (const chunk of req) chunks.push(chunk);
   const rawBody = Buffer.concat(chunks).toString('utf8');
 
-  if (!secret || !verifyStripeSignature(rawBody, sig || '', secret)) {
+  console.log('[stripe-webhook] body length:', rawBody.length);
+
+  if (!sig || !verifyStripeSignature(rawBody, sig, secret)) {
+    console.error('[stripe-webhook] signature verification failed');
     return res.status(400).json({ error: 'Invalid signature' });
   }
 
@@ -104,8 +125,11 @@ export default async function handler(req, res) {
   try {
     event = JSON.parse(rawBody);
   } catch {
+    console.error('[stripe-webhook] JSON parse failed');
     return res.status(400).json({ error: 'Invalid JSON' });
   }
+
+  console.log('[stripe-webhook] event type:', event.type);
 
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object;
@@ -113,14 +137,22 @@ export default async function handler(req, res) {
     const planName = session.metadata?.plan_name || 'Essencial';
     const ownerEmail = session.customer_email || session.customer_details?.email;
 
+    console.log('[stripe-webhook] checkout.session.completed | company:', companyId, '| plan:', planName, '| email:', ownerEmail);
+
     if (companyId) {
       const company = await activateCompany(companyId, planName);
       if (!company) {
         console.error('[stripe-webhook] Failed to activate company', companyId);
-      } else if (ownerEmail) {
-        const sent = await sendWelcomeEmail(company, ownerEmail, planName);
-        if (!sent) console.warn('[stripe-webhook] Welcome email failed for', ownerEmail);
+      } else {
+        console.log('[stripe-webhook] Company activated:', companyId);
+        if (ownerEmail) {
+          const sent = await sendWelcomeEmail(company, ownerEmail, planName);
+          console.log('[stripe-webhook] Welcome email sent:', sent, 'to', ownerEmail);
+          if (!sent) console.warn('[stripe-webhook] Welcome email failed for', ownerEmail);
+        }
       }
+    } else {
+      console.warn('[stripe-webhook] No company_id in session metadata');
     }
   }
 
