@@ -29,7 +29,14 @@ Deno.serve(async (req: Request) => {
   );
 
   const body = await req.json();
-  const { barbershop_name, slug, owner_nome, owner_email, password, plan_name, test_mode } = body;
+  const { barbershop_name, slug, owner_nome, owner_email, password, plan_name, test_mode, action, company_id } = body;
+
+  // Rollback: delete company + its barbearia_users when checkout fails
+  if (action === 'rollback' && company_id) {
+    await supabase.from('barbearia_users').delete().eq('barbearia_id', company_id);
+    await supabase.from('companies').delete().eq('id', company_id);
+    return Response.json({ success: true }, { headers: corsHeaders });
+  }
 
   if (!barbershop_name || !slug || !owner_email || !password) {
     return Response.json({ error: 'Campos obrigatórios ausentes.' }, { status: 400, headers: corsHeaders });

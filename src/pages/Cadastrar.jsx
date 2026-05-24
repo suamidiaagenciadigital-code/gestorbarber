@@ -112,7 +112,11 @@ export default function Cadastrar() {
       });
 
       if (checkoutErr || !checkoutData?.checkout_url) {
-        setError(checkoutData?.error || 'Erro ao redirecionar para pagamento.');
+        // Rollback: delete the company so the email isn't permanently blocked
+        await supabase.functions.invoke('self-signup', {
+          body: { action: 'rollback', company_id: signupData.company_id },
+        });
+        setError(checkoutData?.error || checkoutErr?.message || 'Erro ao iniciar pagamento. Tente novamente.');
         setLoading(false);
         return;
       }
