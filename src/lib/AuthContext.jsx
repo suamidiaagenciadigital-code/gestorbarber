@@ -3,13 +3,30 @@ import { supabase } from '@/lib/supabase';
 
 const AuthContext = createContext(null);
 
+// Use plain fetch instead of the Supabase client to avoid the internal
+// getSession() call that hangs in Supabase JS v2.49.x.
+// app_configs has RLS disabled so the anon key is sufficient.
+const SUPABASE_URL      = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
 async function fetchSuperAdminEmails() {
-  const { data } = await supabase
-    .from('app_configs')
-    .select('super_admin_emails')
-    .limit(1)
-    .maybeSingle();
-  return data?.super_admin_emails ?? [];
+  try {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/app_configs?select=super_admin_emails&limit=1`,
+      {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          Accept: 'application/json',
+        },
+      }
+    );
+    if (!r.ok) return [];
+    const rows = await r.json();
+    return rows?.[0]?.super_admin_emails ?? [];
+  } catch {
+    return [];
+  }
 }
 
 export function AuthProvider({ children }) {
