@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, Navigate } from 'react-router-dom';
 import { Calendar, Users, Briefcase, Scissors, DollarSign, BarChart2, Zap, Settings, UserCheck, Home, LogOut, Globe, ArrowLeft, Heart } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useCompany } from '@/hooks/useCompany';
@@ -33,12 +33,17 @@ function GBLogo({ size = 8 }) {
 
 export default function AppLayout({ children }) {
   const location = useLocation();
-  const { company } = useCompany();
+  const { company, companyId, isLoading: loadingCompany } = useCompany();
   const { isSuperAdmin } = useAuth();
   const bookingLink = company?.slug ? `${window.location.origin}/agendar/${company.slug}` : null;
 
   const slugParam = isSuperAdmin ? new URLSearchParams(window.location.search).get('slug') : null;
   const withSlug = (path) => slugParam ? `${path}?slug=${slugParam}` : path;
+
+  // Super admin visiting an app page without a company context → send to master
+  if (isSuperAdmin && !loadingCompany && !companyId) {
+    return <Navigate to="/master" replace />;
+  }
 
   useEffect(() => {
     const companyName = company?.name;
