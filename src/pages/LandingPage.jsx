@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Calendar, Users, TrendingUp, ArrowRight, CheckCircle, Zap, BarChart2, Globe, Mail, MessageSquare, Instagram } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import LandingFAQ from '@/components/landing/LandingFAQ';
@@ -81,6 +81,7 @@ const PLANS = [
 
 export default function LandingPage() {
   const [annual, setAnnual] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-[#F7F3EC] font-inter">
@@ -350,16 +351,16 @@ export default function LandingPage() {
                   </div>
 
                   <div className="px-8 pb-8">
-                    <a href={waLink(p.name)} target="_blank" rel="noopener noreferrer">
-                      <button className="w-full py-3 rounded-xl font-semibold text-sm transition-all"
-                        style={p.highlight
-                          ? { background: '#C89B3C', color: '#111111' }
-                          : { background: '#111111', color: '#F7F3EC' }}
-                        onMouseEnter={e => { e.currentTarget.style.opacity = '0.88'; }}
-                        onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}>
-                        {p.cta}
-                      </button>
-                    </a>
+                    <button
+                      onClick={() => navigate(`/cadastrar?plano=${p.name.toLowerCase()}`)}
+                      className="w-full py-3 rounded-xl font-semibold text-sm transition-all"
+                      style={p.highlight
+                        ? { background: '#C89B3C', color: '#111111' }
+                        : { background: '#111111', color: '#F7F3EC' }}
+                      onMouseEnter={e => { e.currentTarget.style.opacity = '0.88'; }}
+                      onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}>
+                      {p.cta}
+                    </button>
                   </div>
                 </div>
               );

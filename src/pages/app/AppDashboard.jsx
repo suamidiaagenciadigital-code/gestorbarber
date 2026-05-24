@@ -170,6 +170,21 @@ export default function AppDashboard() {
           <p className="text-gray-500 text-sm mt-1">{format(now, "EEEE, d 'de' MMMM", { locale: ptBR })} · {company?.name || 'Sua barbearia'}</p>
         </div>
 
+        {/* Banner de boas-vindas — apenas enquanto onboarding não concluído */}
+        {company && !company.onboarding_completed && (
+          <div className="bg-gradient-to-r from-[#1B3A4B] to-[#2D5C73] rounded-2xl p-5 mb-6 flex items-start gap-4">
+            <div className="w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center flex-shrink-0 text-xl">✂️</div>
+            <div className="flex-1">
+              <h3 className="font-bold text-white mb-0.5">Configure sua barbearia</h3>
+              <p className="text-white/70 text-sm">Complete o assistente de configuração para liberar todas as funcionalidades.</p>
+            </div>
+            <Link to="/onboarding"
+              className="shrink-0 bg-[#C89B3C] text-[#111111] text-sm font-semibold px-4 py-2 rounded-xl hover:bg-[#B8892F] transition-colors whitespace-nowrap">
+              Configurar agora
+            </Link>
+          </div>
+        )}
+
         {/* Link público de agendamento */}
         {bookingLink ? (
           <div className="bg-[#1B3A4B]/5 border border-[#1B3A4B]/20 rounded-2xl p-4 mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-3">

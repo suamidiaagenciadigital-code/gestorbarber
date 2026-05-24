@@ -104,6 +104,13 @@ Deno.serve(async (req: Request) => {
       .limit(1);
     const company = companies?.[0];
 
+    if (company && company.status === 'pending_payment') {
+      return Response.json(
+        { error: 'pagamento_pendente', company_id: company.id },
+        { status: 403, headers: corsHeaders },
+      );
+    }
+
     if (company && (company.status === 'blocked' || company.status_cobranca === 'suspenso' || company.status_cobranca === 'cancelado')) {
       return Response.json(
         { error: 'acesso_suspenso', company_status: company.status_cobranca || company.status },

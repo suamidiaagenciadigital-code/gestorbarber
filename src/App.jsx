@@ -19,6 +19,8 @@ import Onboarding from './pages/Onboarding';
 import MasterPanel from './pages/MasterPanel';
 import Termos from './pages/Termos';
 import Privacidade from './pages/Privacidade';
+import Cadastrar from './pages/Cadastrar';
+import CadastrarSucesso from './pages/CadastrarSucesso';
 
 // Master pages
 import MasterLogin from './pages/master/MasterLogin';
@@ -62,6 +64,8 @@ function App() {
             {/* ── PUBLIC ROUTES ── */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/agendar/:slug" element={<PublicBooking />} />
+            <Route path="/cadastrar" element={<Cadastrar />} />
+            <Route path="/cadastrar/sucesso" element={<CadastrarSucesso />} />
 
             {/* ── DEMO ROUTES (public, no login required) ── */}
             <Route path="/demo/dashboard" element={<DemoDashboard />} />

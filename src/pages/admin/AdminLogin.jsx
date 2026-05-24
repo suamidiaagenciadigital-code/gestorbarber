@@ -31,6 +31,8 @@ export default function AdminLogin() {
       } else {
         navigate('/admin/dashboard');
       }
+    } else if (res.data?.error === 'pagamento_pendente') {
+      setError('⏳ Aguardando confirmação do pagamento. Se já pagou, aguarde alguns minutos e tente novamente.');
     } else if (res.data?.error === 'acesso_suspenso') {
       navigate('/admin/suspenso');
     } else {
