@@ -28,11 +28,7 @@ export default function AdminLogin() {
       if (res.data?.success) {
         const { user, company } = res.data;
         setAdminSession({ user, company });
-        if (user.forcar_troca_senha) {
-          navigate('/admin/trocar-senha');
-        } else {
-          navigate('/admin/dashboard');
-        }
+        navigate('/app/dashboard');
       } else {
         setError(res.data?.error || 'Credenciais inválidas');
       }
