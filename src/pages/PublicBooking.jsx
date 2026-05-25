@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { Scissors, Clock, ChevronRight, Check, User, ChevronLeft, AlertCircle } from 'lucide-react';
 import { format, addDays, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -25,6 +25,9 @@ const DAY_MAP = { 0: 'dom', 1: 'seg', 2: 'ter', 3: 'qua', 4: 'qui', 5: 'sex', 6:
 
 export default function PublicBooking() {
   const { slug } = useParams();
+  const [searchParams] = useSearchParams();
+  const barbeiroParam = searchParams.get('barbeiro'); // pre-selected professional ID
+
   const [step, setStep] = useState(0);
   const [selected, setSelected] = useState({ service: null, professional: null, date: null, time: null });
   const [form, setForm] = useState({ name: '', phone: '', notes: '' });
@@ -64,11 +67,20 @@ export default function PublicBooking() {
 
   const primaryColor = company?.primary_color || '#1B3A4B';
 
+  // Pre-select professional from URL param and skip step 1
+  const fixedPro = barbeiroParam ? professionals.find(p => p.id === barbeiroParam) : null;
+  useEffect(() => {
+    if (fixedPro && !selected.professional) {
+      setSelected(prev => ({ ...prev, professional: fixedPro }));
+    }
+  }, [fixedPro?.id]);
+
   useEffect(() => {
     if (company?.name) {
-      document.title = `Agendar | ${company.name}`;
+      const proName = fixedPro?.name ? ` · ${fixedPro.name}` : '';
+      document.title = `Agendar${proName} | ${company.name}`;
     }
-  }, [company?.name]);
+  }, [company?.name, fixedPro?.name]);
 
   // Compute available time slots for selected date/professional/service
   const getAvailableSlots = () => {
@@ -276,18 +288,40 @@ export default function PublicBooking() {
       {/* Progress bar */}
       <div className="bg-white border-b border-black/10">
         <div className="max-w-xl mx-auto px-6 py-3">
-          <div className="flex items-center gap-2">
-            {['Serviço', 'Profissional', 'Horário', 'Seus dados'].map((s, i) => (
-              <div key={s} className="flex items-center gap-2 flex-1">
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${i < step ? 'text-white' : i === step ? 'text-white' : 'bg-gray-100 text-gray-400'}`}
-                  style={{ backgroundColor: i <= step ? primaryColor : undefined }}>
-                  {i < step ? <Check className="w-3 h-3" /> : i + 1}
+          {fixedPro ? (
+            // Com barbeiro fixo: 3 etapas (sem "Profissional")
+            <div className="flex items-center gap-2">
+              {['Serviço', 'Horário', 'Seus dados'].map((s, i) => {
+                const stepMap = [0, 2, 3]; // mapa para os steps reais
+                const active = step === stepMap[i];
+                const done = step > stepMap[i];
+                return (
+                  <div key={s} className="flex items-center gap-2 flex-1">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${done || active ? 'text-white' : 'bg-gray-100 text-gray-400'}`}
+                      style={{ backgroundColor: done || active ? primaryColor : undefined }}>
+                      {done ? <Check className="w-3 h-3" /> : i + 1}
+                    </div>
+                    <span className={`text-xs font-medium hidden sm:block ${active ? 'text-[#1B1C1E]' : 'text-gray-400'}`}>{s}</span>
+                    {i < 2 && <div className="flex-1 h-px" style={{ backgroundColor: done ? primaryColor : '#e5e7eb' }} />}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            // Fluxo completo: 4 etapas
+            <div className="flex items-center gap-2">
+              {['Serviço', 'Profissional', 'Horário', 'Seus dados'].map((s, i) => (
+                <div key={s} className="flex items-center gap-2 flex-1">
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${i < step ? 'text-white' : i === step ? 'text-white' : 'bg-gray-100 text-gray-400'}`}
+                    style={{ backgroundColor: i <= step ? primaryColor : undefined }}>
+                    {i < step ? <Check className="w-3 h-3" /> : i + 1}
+                  </div>
+                  <span className={`text-xs font-medium hidden sm:block ${i === step ? 'text-[#1B1C1E]' : 'text-gray-400'}`}>{s}</span>
+                  {i < 3 && <div className="flex-1 h-px" style={{ backgroundColor: i < step ? primaryColor : '#e5e7eb' }} />}
                 </div>
-                <span className={`text-xs font-medium hidden sm:block ${i === step ? 'text-[#1B1C1E]' : 'text-gray-400'}`}>{s}</span>
-                {i < 3 && <div className={`flex-1 h-px`} style={{ backgroundColor: i < step ? primaryColor : '#e5e7eb' }} />}
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -296,6 +330,18 @@ export default function PublicBooking() {
         {/* Step 0: Service */}
         {step === 0 && (
           <div>
+            {fixedPro && (
+              <div className="flex items-center gap-3 mb-6 p-3 bg-white rounded-2xl border border-black/8">
+                {fixedPro.photo_url
+                  ? <img src={fixedPro.photo_url} alt={fixedPro.name} className="w-10 h-10 rounded-xl object-cover" />
+                  : <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold flex-shrink-0" style={{ backgroundColor: primaryColor }}>{fixedPro.name[0]}</div>
+                }
+                <div>
+                  <div className="font-bold text-sm text-[#1B1C1E]">{fixedPro.name}</div>
+                  <div className="text-xs text-gray-400">{fixedPro.specialty || 'Barbeiro'}</div>
+                </div>
+              </div>
+            )}
             <h2 className="text-xl font-black text-[#1B1C1E] mb-6">Escolha o serviço</h2>
             {services.length === 0 ? (
               <div className="text-center py-10 text-gray-400">
@@ -304,7 +350,7 @@ export default function PublicBooking() {
             ) : (
               <div className="grid gap-3">
                 {services.map(s => (
-                  <button key={s.id} onClick={() => { setSelected(p => ({ ...p, service: s })); setStep(1); }}
+                  <button key={s.id} onClick={() => { setSelected(p => ({ ...p, service: s })); setStep(fixedPro ? 2 : 1); }}
                     className="bg-white rounded-2xl border border-black/8 p-5 text-left hover:shadow-md transition-all flex items-center justify-between group"
                     style={{ borderColor: selected.service?.id === s.id ? primaryColor : undefined }}>
                     <div>
@@ -368,7 +414,7 @@ export default function PublicBooking() {
         {/* Step 2: Date & Time */}
         {step === 2 && (
           <div>
-            <button onClick={() => setStep(1)} className="flex items-center gap-1 text-sm text-gray-500 mb-5 hover:text-[#1B1C1E]">
+            <button onClick={() => setStep(fixedPro ? 0 : 1)} className="flex items-center gap-1 text-sm text-gray-500 mb-5 hover:text-[#1B1C1E]">
               <ChevronLeft className="w-4 h-4" />Voltar
             </button>
             <h2 className="text-xl font-black text-[#1B1C1E] mb-6">Escolha o horário</h2>

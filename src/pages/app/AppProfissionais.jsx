@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCompany } from '@/hooks/useCompany';
 import { usePlan } from '@/hooks/usePlan';
 import { useState } from 'react';
-import { Plus, X, Pencil, Scissors, Trash2, Lock } from 'lucide-react';
+import { Plus, X, Pencil, Scissors, Trash2, Lock, Link2, Calendar, Copy, CheckCircle } from 'lucide-react';
 import UpgradeModal from '@/components/UpgradeModal';
 
 const DAYS = [
@@ -17,9 +17,10 @@ const defaultSchedule = Object.fromEntries(DAYS.map(d => [d.key, { open: '09:00'
 const emptyForm = { name: '', specialty: '', photo_url: '', active: true, work_schedule: defaultSchedule, service_ids: [], commission_type: 'percent', commission_value: 0 };
 
 export default function AppProfissionais() {
-  const { companyId, isLoading: loadingCompany } = useCompany();
+  const { company, companyId, isLoading: loadingCompany } = useCompany();
   const { plan, planName } = usePlan();
   const [showForm, setShowForm] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(null); // 'booking_<id>' | 'agenda_<id>'
   const [showUpgrade, setShowUpgrade] = useState(null); // null | 'barbers' | 'commissions'
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
@@ -84,6 +85,12 @@ export default function AppProfissionais() {
       ...p,
       service_ids: p.service_ids.includes(sid) ? p.service_ids.filter(id => id !== sid) : [...p.service_ids, sid]
     }));
+  };
+
+  const handleCopyLink = (key, url) => {
+    navigator.clipboard.writeText(url);
+    setCopiedLink(key);
+    setTimeout(() => setCopiedLink(null), 2500);
   };
 
   if (loadingCompany || isLoading) {
@@ -152,6 +159,32 @@ export default function AppProfissionais() {
                 )}
                 {pro.commission_value > 0 && (
                   <div className="text-xs text-gray-400 mt-1">Comissão: {pro.commission_value}{pro.commission_type === 'percent' ? '%' : ' R$'}</div>
+                )}
+
+                {/* Links de divulgação */}
+                {company?.slug && (
+                  <div className="mt-4 pt-4 border-t border-black/5 flex flex-col gap-2">
+                    <button
+                      onClick={() => handleCopyLink(`booking_${pro.id}`, `${window.location.origin}/agendar/${company.slug}?barbeiro=${pro.id}`)}
+                      className="flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-lg transition-all w-full justify-center"
+                      style={copiedLink === `booking_${pro.id}`
+                        ? { background: '#D1FAE5', color: '#065F46' }
+                        : { background: '#F7F3EC', color: '#1B1C1E' }}>
+                      {copiedLink === `booking_${pro.id}`
+                        ? <><CheckCircle className="w-3.5 h-3.5" />Copiado!</>
+                        : <><Link2 className="w-3.5 h-3.5" />Link de agendamento</>}
+                    </button>
+                    <button
+                      onClick={() => handleCopyLink(`agenda_${pro.id}`, `${window.location.origin}/agenda/${company.slug}/${pro.id}`)}
+                      className="flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-lg transition-all w-full justify-center"
+                      style={copiedLink === `agenda_${pro.id}`
+                        ? { background: '#D1FAE5', color: '#065F46' }
+                        : { background: '#EFF6FF', color: '#1D4ED8' }}>
+                      {copiedLink === `agenda_${pro.id}`
+                        ? <><CheckCircle className="w-3.5 h-3.5" />Copiado!</>
+                        : <><Calendar className="w-3.5 h-3.5" />Link da minha agenda</>}
+                    </button>
+                  </div>
                 )}
               </div>
             ))}

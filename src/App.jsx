@@ -15,6 +15,7 @@ import AdminRoute from '@/components/guards/AdminRoute';
 // Public pages
 import LandingPage from './pages/LandingPage';
 import PublicBooking from './pages/PublicBooking';
+import AgendaBarbeiro from './pages/AgendaBarbeiro';
 import Onboarding from './pages/Onboarding';
 import MasterPanel from './pages/MasterPanel';
 import Termos from './pages/Termos';
@@ -65,6 +66,7 @@ function App() {
             {/* ── PUBLIC ROUTES ── */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/agendar/:slug" element={<PublicBooking />} />
+            <Route path="/agenda/:slug/:proId" element={<AgendaBarbeiro />} />
             <Route path="/cadastrar" element={<Cadastrar />} />
             <Route path="/cadastrar/sucesso" element={<CadastrarSucesso />} />
 
