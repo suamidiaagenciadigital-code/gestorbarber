@@ -26,12 +26,7 @@ export default function AppFinanceiro() {
     enabled: !!companyId,
   });
 
-  // Also pull from completed appointments to auto-calculate revenue
-  const { data: appointments = [] } = useQuery({
-    queryKey: ['appointments', companyId],
-    queryFn: () => base44.entities.Appointment.filter({ company_id: companyId, status: 'concluido' }),
-    enabled: !!companyId,
-  });
+  // Appointments now create FinancialEntry records automatically — no separate query needed.
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.FinancialEntry.create({ ...data, company_id: companyId, amount: +data.amount }),
@@ -57,9 +52,6 @@ export default function AppFinanceiro() {
   const totalIn = entradas.reduce((s, f) => s + (f.amount || 0), 0);
   const totalOut = saidas.reduce((s, f) => s + (f.amount || 0), 0);
   const saldo = totalIn - totalOut;
-
-  // Appointment revenue (not yet registered as financial entry)
-  const apptRevenue = appointments.filter(filterFn.bind(null)).reduce((s, a) => s + (a.price || 0), 0);
 
   if (loadingCompany || isLoading) {
     return (
@@ -132,16 +124,6 @@ export default function AppFinanceiro() {
             <div className="text-2xl font-black text-white">R${saldo.toFixed(2)}</div>
           </div>
         </div>
-
-        {/* Appointments revenue hint */}
-        {apptRevenue > 0 && (
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4 flex items-center justify-between">
-            <div>
-              <p className="text-sm font-semibold text-blue-800">Receita de atendimentos concluídos: R${apptRevenue.toFixed(2)}</p>
-              <p className="text-xs text-blue-600">Valor calculado a partir dos agendamentos com status "concluído" no período</p>
-            </div>
-          </div>
-        )}
 
         {/* Entries list */}
         <div className="bg-white rounded-2xl border border-black/8 overflow-hidden">

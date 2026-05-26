@@ -14,6 +14,18 @@ const DAYS = [
 
 const defaultSchedule = Object.fromEntries(DAYS.map(d => [d.key, { open: '09:00', close: '18:00', active: d.key !== 'dom' }]));
 
+/** Auto-transforma links do Google Drive em URL de imagem direta */
+function transformPhotoUrl(url = '') {
+  if (!url) return url;
+  // Formato: drive.google.com/file/d/ID/view...
+  const m1 = url.match(/drive\.google\.com\/file\/d\/([^/?]+)/);
+  if (m1) return `https://drive.google.com/uc?export=view&id=${m1[1]}`;
+  // Formato: drive.google.com/open?id=ID
+  const m2 = url.match(/drive\.google\.com\/open\?id=([^&]+)/);
+  if (m2) return `https://drive.google.com/uc?export=view&id=${m2[1]}`;
+  return url;
+}
+
 const emptyForm = { name: '', specialty: '', photo_url: '', active: true, work_schedule: defaultSchedule, service_ids: [], commission_type: 'percent', commission_value: 0 };
 
 export default function AppProfissionais() {
@@ -224,10 +236,23 @@ export default function AppProfissionais() {
                         className="w-full px-3 py-2.5 border border-black/10 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3A4B]/20" />
                     </div>
                     <div>
-                      <label className="text-xs font-semibold text-gray-500 block mb-1">URL da Foto</label>
-                      <input type="url" value={form.photo_url} onChange={e => setForm(p => ({ ...p, photo_url: e.target.value }))}
-                        placeholder="https://..."
+                      <label className="text-xs font-semibold text-gray-500 block mb-1">Foto do Profissional</label>
+                      <input type="url" value={form.photo_url}
+                        onChange={e => setForm(p => ({ ...p, photo_url: e.target.value }))}
+                        onBlur={e => setForm(p => ({ ...p, photo_url: transformPhotoUrl(e.target.value) }))}
+                        placeholder="Cole o link da foto aqui"
                         className="w-full px-3 py-2.5 border border-black/10 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3A4B]/20" />
+                      {form.photo_url ? (
+                        <div className="mt-2 flex items-center gap-3">
+                          <img src={form.photo_url} alt="Preview" className="w-12 h-12 rounded-xl object-cover border border-black/10"
+                            onError={e => { e.currentTarget.style.opacity = '0.3'; }} />
+                          <p className="text-xs text-green-600 font-medium">Preview da foto</p>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-400 mt-1.5 leading-relaxed">
+                          Cole o link direto da imagem. <strong>Google Drive:</strong> botão direito na foto → "Obter link" → "Qualquer pessoa" → cole aqui (transformamos automaticamente). Ou use Google Fotos, Imgur, etc.
+                        </p>
+                      )}
                     </div>
                     {plan.commissions ? (
                       <div className="grid grid-cols-2 gap-3">

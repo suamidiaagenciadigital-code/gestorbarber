@@ -2,7 +2,7 @@ import AppLayout from '@/components/layout/AppLayout';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCompany } from '@/hooks/useCompany';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Plus, X, Calendar } from 'lucide-react';
 import { format, addDays, startOfWeek } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -70,6 +70,86 @@ export default function AppAgenda() {
     mutationFn: (id) => base44.entities.Appointment.delete(id),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['appointments', companyId] }); setSelectedAppt(null); },
   });
+
+  // ── Auto-conclusão de agendamentos passados ──────────────────────────
+  // Roda uma vez quando os agendamentos carregam. Marca como "concluído"
+  // qualquer agendamento agendado/confirmado cujo horário já passou,
+  // e cria a entrada financeira correspondente.
+  const autoCompleteRanRef = useRef(false);
+  useEffect(() => {
+    if (autoCompleteRanRef.current || !companyId || appointments.length === 0) return;
+    autoCompleteRanRef.current = true;
+
+    const now = new Date();
+    const toComplete = appointments.filter(a =>
+      ['agendado', 'confirmado'].includes(a.status) &&
+      new Date(a.scheduled_at) < now
+    );
+    if (toComplete.length === 0) return;
+
+    (async () => {
+      for (const appt of toComplete) {
+        try {
+          await base44.entities.Appointment.update(appt.id, { status: 'concluido' });
+          if ((appt.price || 0) > 0) {
+            await base44.entities.FinancialEntry.create({
+              company_id: companyId,
+              type: 'entrada',
+              category: 'Atendimento',
+              description: `${appt.service_name || 'Atendimento'} - ${appt.customer_name || 'Cliente'}`,
+              amount: appt.price,
+              date: format(new Date(appt.scheduled_at), 'yyyy-MM-dd'),
+              status: 'confirmado',
+              reference_appointment_id: appt.id,
+            });
+          }
+        } catch (e) {
+          console.warn('[Auto-conclude]', appt.id, e);
+        }
+      }
+      queryClient.invalidateQueries({ queryKey: ['appointments', companyId] });
+      queryClient.invalidateQueries({ queryKey: ['financial', companyId] });
+    })();
+  }, [appointments.length > 0, companyId]); // eslint-disable-line
+
+  // ── Mudança de status com sincronização financeira ───────────────────
+  const handleStatusChange = async (appt, newStatus) => {
+    const oldStatus = appt.status;
+    try {
+      await base44.entities.Appointment.update(appt.id, { status: newStatus });
+      queryClient.invalidateQueries({ queryKey: ['appointments', companyId] });
+      setSelectedAppt(null);
+
+      if (newStatus === 'concluido' && oldStatus !== 'concluido') {
+        // Criar lançamento financeiro
+        if ((appt.price || 0) > 0) {
+          await base44.entities.FinancialEntry.create({
+            company_id: companyId,
+            type: 'entrada',
+            category: 'Atendimento',
+            description: `${appt.service_name || 'Atendimento'} - ${appt.customer_name || 'Cliente'}`,
+            amount: appt.price,
+            date: format(new Date(appt.scheduled_at), 'yyyy-MM-dd'),
+            status: 'confirmado',
+            reference_appointment_id: appt.id,
+          });
+          queryClient.invalidateQueries({ queryKey: ['financial', companyId] });
+        }
+      } else if (oldStatus === 'concluido' && newStatus !== 'concluido') {
+        // Remover lançamento financeiro vinculado
+        const entries = await base44.entities.FinancialEntry.filter({
+          company_id: companyId,
+          reference_appointment_id: appt.id,
+        });
+        for (const entry of entries) {
+          await base44.entities.FinancialEntry.delete(entry.id);
+        }
+        queryClient.invalidateQueries({ queryKey: ['financial', companyId] });
+      }
+    } catch (e) {
+      console.error('[handleStatusChange]', e);
+    }
+  };
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 6 }, (_, i) => addDays(weekStart, i));
@@ -244,7 +324,7 @@ export default function AppAgenda() {
                 <div className="grid grid-cols-3 gap-2">
                   {Object.entries(statusConfig).map(([key, val]) => (
                     <button key={key}
-                      onClick={() => updateMutation.mutate({ id: selectedAppt.id, data: { status: key } })}
+                      onClick={() => handleStatusChange(selectedAppt, key)}
                       className={`text-xs font-medium px-2 py-2 rounded-lg ${selectedAppt.status === key ? val.badge + ' ring-2 ring-offset-1 ring-current' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
                       {val.label}
                     </button>
