@@ -139,7 +139,7 @@ export default function AppClientes() {
             <Lock className="w-4 h-4 text-[#C89B3C] shrink-0" />
             <p className="text-xs text-[#C89B3C] font-medium">
               Histórico completo de clientes disponível no plano <strong>Profissional</strong>.
-              <a href="https://wa.me/5500000000000?text=Quero+fazer+upgrade" target="_blank" rel="noopener noreferrer" className="underline ml-1">Fazer upgrade</a>
+              <a href="https://buy.stripe.com/aFa7sNehkajjgVi24TgIo00" target="_blank" rel="noopener noreferrer" className="underline ml-1">Fazer upgrade</a>
             </p>
           </div>
         )}

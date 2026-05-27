@@ -1,8 +1,19 @@
-import { Lock, ArrowRight } from 'lucide-react';
+import { Lock, ArrowRight, Zap } from 'lucide-react';
 
-const PLAN_PRICE = { Profissional: 'R$ 99,00/mês', Premium: 'R$ 149,00/mês' };
+const PLAN_CONFIG = {
+  Profissional: {
+    price: 'R$ 99,00/mês',
+    paymentUrl: 'https://buy.stripe.com/aFa7sNehkajjgVi24TgIo00',
+  },
+  Premium: {
+    price: 'R$ 149,00/mês',
+    paymentUrl: 'https://buy.stripe.com/8x28wRfloezzdJ69xlgIo01',
+  },
+};
 
 export default function PlanGate({ feature, requiredPlan = 'Profissional' }) {
+  const config = PLAN_CONFIG[requiredPlan] ?? PLAN_CONFIG.Profissional;
+
   return (
     <div className="p-8 flex items-center justify-center min-h-[400px]">
       <div className="text-center max-w-sm">
@@ -14,15 +25,17 @@ export default function PlanGate({ feature, requiredPlan = 'Profissional' }) {
           Este recurso está disponível a partir do plano
         </p>
         <p className="font-bold text-[#C89B3C] mb-1">{requiredPlan}</p>
-        <p className="text-gray-400 text-xs mb-6">{PLAN_PRICE[requiredPlan]}</p>
+        <p className="text-gray-400 text-xs mb-6">{config.price}/mês · cancele quando quiser</p>
         <a
-          href="https://wa.me/5500000000000?text=Quero+fazer+upgrade+do+meu+plano+GestorBarber"
+          href={config.paymentUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 bg-[#1B3A4B] text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-[#1B3A4B]/90 transition-colors"
+          className="inline-flex items-center gap-2 bg-[#C89B3C] text-[#111111] px-6 py-3 rounded-xl text-sm font-bold hover:bg-[#C89B3C]/90 transition-colors shadow-sm"
         >
-          Fazer upgrade <ArrowRight className="w-4 h-4" />
+          <Zap className="w-4 h-4" />
+          Assinar plano {requiredPlan}
         </a>
+        <p className="text-xs text-gray-400 mt-3">Pagamento seguro via Stripe</p>
       </div>
     </div>
   );
