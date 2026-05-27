@@ -78,7 +78,19 @@ module.exports = {
   		}
   	}
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [
+    require("tailwindcss-animate"),
+    // Safe area insets para iPhones com notch/Dynamic Island
+    function ({ addUtilities }) {
+      addUtilities({
+        '.safe-area-top':    { paddingTop:    'env(safe-area-inset-top)' },
+        '.safe-area-bottom': { paddingBottom: 'env(safe-area-inset-bottom)' },
+        '.safe-area-left':   { paddingLeft:   'env(safe-area-inset-left)' },
+        '.safe-area-right':  { paddingRight:  'env(safe-area-inset-right)' },
+        '.pb-safe':          { paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' },
+      });
+    },
+  ],
   safelist: [
     'bg-brand', 'text-brand', 'border-brand',
     'bg-brand-light', 'text-brand-mid',
