@@ -4,8 +4,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCompany } from '@/hooks/useCompany';
 import { usePlan } from '@/hooks/usePlan';
 import { useState, useEffect } from 'react';
-import { Search, Plus, X, Users, Pencil, Trash2, Phone, Lock } from 'lucide-react';
+import { Search, Plus, X, Users, Pencil, Trash2, Phone, Lock, Upload } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
+import ImportClientesModal from '@/components/ImportClientesModal';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -24,6 +25,7 @@ export default function AppClientes() {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
   const [showForm, setShowForm] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const queryClient = useQueryClient();
@@ -104,9 +106,16 @@ export default function AppClientes() {
             <h1 className="text-2xl font-black text-[#1B1C1E]">Clientes</h1>
             <p className="text-gray-500 text-sm mt-1">{customers.length} clientes cadastrados</p>
           </div>
-          <button onClick={() => setShowForm(true)} className="bg-[#1B3A4B] text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-[#1B3A4B]/90 transition-colors flex items-center gap-2">
-            <Plus className="w-4 h-4" />Novo cliente
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setShowImport(true)}
+              className="bg-white border border-black/10 text-[#1B3A4B] text-sm font-semibold px-4 py-2 rounded-lg hover:bg-[#F8F7F3] transition-colors flex items-center gap-2">
+              <Upload className="w-4 h-4" />
+              <span className="hidden sm:inline">Importar</span>
+            </button>
+            <button onClick={() => setShowForm(true)} className="bg-[#1B3A4B] text-white text-sm font-semibold px-4 py-2 rounded-lg hover:bg-[#1B3A4B]/90 transition-colors flex items-center gap-2">
+              <Plus className="w-4 h-4" />Novo cliente
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3 mb-5">
@@ -199,6 +208,15 @@ export default function AppClientes() {
             </div>
           )}
         </div>
+
+        {showImport && (
+          <ImportClientesModal
+            companyId={companyId}
+            existingPhones={new Set(customers.map(c => (c.phone || '').replace(/\D/g, '')).filter(Boolean))}
+            onClose={() => setShowImport(false)}
+            onImported={() => queryClient.invalidateQueries({ queryKey: ['customers', companyId] })}
+          />
+        )}
 
         {showForm && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={closeForm}>
