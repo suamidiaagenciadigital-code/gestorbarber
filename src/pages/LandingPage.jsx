@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Calendar, Users, TrendingUp, ArrowRight, CheckCircle, Zap, BarChart2, Globe, Mail, MessageSquare, Instagram } from 'lucide-react';
+import { Calendar, Users, TrendingUp, ArrowRight, CheckCircle, Zap, BarChart2, Globe, Mail, MessageSquare, Instagram, ChevronLeft, ChevronRight, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import LandingFAQ from '@/components/landing/LandingFAQ';
 import LeadForm from '@/components/landing/LeadForm';
@@ -63,10 +63,10 @@ const PLANS = [
     name: 'Premium',
     monthly: 149,
     annual: 119.20,
-    desc: 'Para barbearias premium, redes, franquias ou negócios que querem mais controle, automação e visão de crescimento.',
+    desc: 'Para barbearias que querem o máximo de controle, automação e crescimento com visão completa de resultados.',
     features: [
       'Tudo do plano Profissional',
-      'Gestão avançada de unidades e equipe',
+      'Gestão completa de equipe e comissões',
       'Relatórios completos de desempenho',
       'Controle de clientes recorrentes',
       'Recursos para fidelização',
@@ -79,9 +79,44 @@ const PLANS = [
   },
 ];
 
+const TESTIMONIALS = [
+  {
+    quote: 'Antes eu controlava tudo no papel. Hoje vejo os agendamentos logo de manhã, meus clientes são lembrados automaticamente e consigo acompanhar o faturamento sem precisar parar o serviço. Mudou completamente minha rotina.',
+    name: 'Carlos Mendes',
+    barbershop: 'Barbearia Mendes',
+    city: 'São Paulo, SP',
+  },
+  {
+    quote: 'O que mais me surpreendeu foi a facilidade. Em menos de uma hora tava tudo configurado. Meus clientes adoraram o agendamento online, e eu finalmente sei quem são meus clientes mais fiéis.',
+    name: 'Rafael Souza',
+    barbershop: 'BarberStyle',
+    city: 'Goiânia, GO',
+  },
+  {
+    quote: 'Tentei outros sistemas antes, mas eram complicados demais pra barbearia. O Gestor Barber é o único que entende como a barbearia funciona de verdade. O relatório de faturamento sozinho já valeu o investimento.',
+    name: 'Diego Lima',
+    barbershop: 'Black Barber Shop',
+    city: 'Belo Horizonte, MG',
+  },
+  {
+    quote: 'Gerencio dois barbeiros e antes era um caos. Hoje cada um tem sua agenda organizada, eu vejo as comissões de cada um e o cliente consegue escolher com quem quer se atender. Profissional demais.',
+    name: 'Thiago Ferreira',
+    barbershop: 'Studio Ferreira',
+    city: 'Recife, PE',
+  },
+];
+
 export default function LandingPage() {
   const [annual, setAnnual] = useState(false);
+  const [testimonialIdx, setTestimonialIdx] = useState(0);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTestimonialIdx(i => (i + 1) % TESTIMONIALS.length);
+    }, 5500);
+    return () => clearInterval(timer);
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#F7F3EC] font-inter">
@@ -99,11 +134,18 @@ export default function LandingPage() {
             <a href="#planos" className="hover:text-[#111111] transition-colors">Planos</a>
             <Link to="/demo/dashboard" className="hover:text-[#111111] transition-colors">Demo</Link>
           </div>
-          <Link to="/demo/dashboard">
-            <Button variant="outline" className="border-[#111111] text-[#111111] hover:bg-[#111111] hover:text-white transition-all rounded-lg">
-              Ver Demo
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <a href="#planos"
+              className="md:hidden px-4 py-2 rounded-lg text-sm font-semibold transition-all"
+              style={{ background: '#C89B3C', color: '#111111' }}>
+              Ver Planos
+            </a>
+            <Link to="/demo/dashboard">
+              <Button variant="outline" className="border-[#111111] text-[#111111] hover:bg-[#111111] hover:text-white transition-all rounded-lg">
+                Ver Demo
+              </Button>
+            </Link>
+          </div>
         </div>
       </nav>
 
@@ -365,6 +407,65 @@ export default function LandingPage() {
                 </div>
               );
             })}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Testimonials ── */}
+      <section className="py-24 px-6 bg-white">
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-black text-[#111111] mb-3 font-playfair">O que dizem os donos de barbearia</h2>
+            <p className="text-[#6B6258]">Quem já usa o Gestor Barber na rotina do dia a dia.</p>
+          </div>
+
+          <div className="relative">
+            <div className="bg-[#F7F3EC] rounded-3xl border border-[#E8DED0] p-8 md:p-12 min-h-[260px] flex flex-col justify-between transition-all">
+              <div>
+                <div className="flex gap-1 mb-6">
+                  {[1,2,3,4,5].map(i => (
+                    <Star key={i} className="w-5 h-5 fill-[#C89B3C] text-[#C89B3C]" />
+                  ))}
+                </div>
+                <blockquote className="text-lg md:text-xl font-medium text-[#1B1C1E] leading-relaxed mb-8">
+                  "{TESTIMONIALS[testimonialIdx].quote}"
+                </blockquote>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-black text-lg flex-shrink-0"
+                  style={{ background: '#1B3A4B' }}>
+                  {TESTIMONIALS[testimonialIdx].name[0]}
+                </div>
+                <div>
+                  <div className="font-bold text-[#111111]">{TESTIMONIALS[testimonialIdx].name}</div>
+                  <div className="text-sm text-[#6B6258]">{TESTIMONIALS[testimonialIdx].barbershop} · {TESTIMONIALS[testimonialIdx].city}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Controles */}
+            <div className="flex items-center justify-between mt-6">
+              <button
+                onClick={() => setTestimonialIdx(i => (i - 1 + TESTIMONIALS.length) % TESTIMONIALS.length)}
+                className="w-10 h-10 rounded-full border border-[#E8DED0] bg-white flex items-center justify-center hover:border-[#C89B3C] transition-colors">
+                <ChevronLeft className="w-5 h-5 text-[#6B6258]" />
+              </button>
+              <div className="flex items-center gap-2">
+                {TESTIMONIALS.map((_, i) => (
+                  <button key={i} onClick={() => setTestimonialIdx(i)}
+                    className="h-2 rounded-full transition-all duration-300"
+                    style={{
+                      width: i === testimonialIdx ? 24 : 8,
+                      background: i === testimonialIdx ? '#C89B3C' : '#E8DED0',
+                    }} />
+                ))}
+              </div>
+              <button
+                onClick={() => setTestimonialIdx(i => (i + 1) % TESTIMONIALS.length)}
+                className="w-10 h-10 rounded-full border border-[#E8DED0] bg-white flex items-center justify-center hover:border-[#C89B3C] transition-colors">
+                <ChevronRight className="w-5 h-5 text-[#6B6258]" />
+              </button>
+            </div>
           </div>
         </div>
       </section>
