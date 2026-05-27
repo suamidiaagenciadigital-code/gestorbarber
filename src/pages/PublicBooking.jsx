@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useParams, useSearchParams } from 'react-router-dom';
-import { Scissors, Clock, ChevronRight, Check, User, ChevronLeft, AlertCircle } from 'lucide-react';
+import { Scissors, Clock, ChevronRight, Check, User, ChevronLeft, AlertCircle, Loader2 } from 'lucide-react';
 import { format, addDays, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -30,9 +30,11 @@ export default function PublicBooking() {
 
   const [step, setStep] = useState(0);
   const [selected, setSelected] = useState({ service: null, professional: null, date: null, time: null });
-  const [form, setForm] = useState({ name: '', phone: '', notes: '' });
+  const [form, setForm] = useState({ name: '', phone: '', email: '', notes: '' });
   const [bookingDone, setBookingDone] = useState(null);
   const [formError, setFormError] = useState('');
+  const [customerFound, setCustomerFound] = useState(null);
+  const [lookingUp, setLookingUp] = useState(false);
 
   const { data: companies = [], isLoading: loadingCompany } = useQuery({
     queryKey: ['company-by-slug', slug],
@@ -128,6 +130,24 @@ export default function PublicBooking() {
     });
   };
 
+  const handlePhoneLookup = async (phone) => {
+    const digits = phone.replace(/\D/g, '');
+    if (!company?.id || digits.length < 8) { setCustomerFound(null); return; }
+    setLookingUp(true);
+    try {
+      const found = await base44.entities.Customer.filter({ company_id: company.id, phone: phone.trim() });
+      if (found.length > 0) {
+        setCustomerFound(found[0]);
+        setForm(p => ({ ...p, name: found[0].name || p.name, email: found[0].email || p.email }));
+      } else {
+        setCustomerFound(null);
+      }
+    } catch {
+      setCustomerFound(null);
+    }
+    setLookingUp(false);
+  };
+
   const handleBook = async () => {
     if (!form.name.trim()) { setFormError('Por favor, informe seu nome'); return; }
     if (!form.phone.trim()) { setFormError('Por favor, informe seu telefone'); return; }
@@ -148,6 +168,7 @@ export default function PublicBooking() {
           company_id: company.id,
           name: form.name.trim(),
           phone: phoneNorm,
+          ...(form.email.trim() ? { email: form.email.trim() } : {}),
           status: 'active',
         });
         customerId = newCustomer?.id ?? null;
@@ -246,6 +267,7 @@ export default function PublicBooking() {
                 `Olá, ${company.nome_fantasia || company.name}! Gostaria de confirmar meu agendamento:`,
                 ``,
                 `Nome: ${form.name}`,
+                form.email ? `E-mail: ${form.email}` : '',
                 `Serviço: ${selected.service?.name}`,
                 `Profissional: ${selected.professional?.id === 'any' ? 'Qualquer disponível' : selected.professional?.name}`,
                 `Data: ${dataFormatada}`,
@@ -505,19 +527,49 @@ export default function PublicBooking() {
 
             <div className="space-y-4">
               <div>
+                <label className="text-xs font-semibold text-gray-500 block mb-1">WhatsApp / Telefone *</label>
+                <div className="relative">
+                  <input type="tel" value={form.phone}
+                    onChange={e => { setForm(p => ({ ...p, phone: e.target.value })); if (customerFound) setCustomerFound(null); }}
+                    onBlur={e => handlePhoneLookup(e.target.value)}
+                    placeholder="(11) 99999-9999"
+                    className="w-full px-4 py-3 border border-black/10 rounded-xl text-sm focus:outline-none focus:ring-2 bg-white pr-10" />
+                  {lookingUp && <Loader2 className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 animate-spin" />}
+                </div>
+              </div>
+
+              {customerFound && (
+                <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0" style={{ backgroundColor: primaryColor }}>
+                    {(customerFound.name || '?')[0].toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-green-800">Olá, {customerFound.name}! 👋</p>
+                    <p className="text-xs text-green-600">Que ótimo ter você de volta!</p>
+                  </div>
+                </div>
+              )}
+
+              <div>
                 <label className="text-xs font-semibold text-gray-500 block mb-1">Seu nome *</label>
                 <input type="text" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
                   placeholder="Como você se chama?"
-                  className="w-full px-4 py-3 border border-black/10 rounded-xl text-sm focus:outline-none focus:ring-2 bg-white" style={{ '--tw-ring-color': primaryColor + '40' }} />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-gray-500 block mb-1">WhatsApp / Telefone *</label>
-                <input type="tel" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))}
-                  placeholder="(11) 99999-9999"
                   className="w-full px-4 py-3 border border-black/10 rounded-xl text-sm focus:outline-none focus:ring-2 bg-white" />
               </div>
+
               <div>
-                <label className="text-xs font-semibold text-gray-500 block mb-1">Observações (opcional)</label>
+                <label className="text-xs font-semibold text-gray-500 block mb-1">
+                  E-mail <span className="font-normal text-gray-400">(opcional)</span>
+                </label>
+                <input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
+                  placeholder="seu@email.com"
+                  className="w-full px-4 py-3 border border-black/10 rounded-xl text-sm focus:outline-none focus:ring-2 bg-white" />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-gray-500 block mb-1">
+                  Observações <span className="font-normal text-gray-400">(opcional)</span>
+                </label>
                 <textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} rows={2}
                   placeholder="Preferências ou informações adicionais"
                   className="w-full px-4 py-3 border border-black/10 rounded-xl text-sm focus:outline-none focus:ring-2 bg-white resize-none" />
