@@ -3,8 +3,9 @@ import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCompany } from '@/hooks/useCompany';
 import { usePlan } from '@/hooks/usePlan';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Plus, X, Users, Pencil, Trash2, Phone, Lock } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -19,12 +20,20 @@ const emptyForm = { name: '', phone: '', email: '', notes: '', status: 'active',
 export default function AppClientes() {
   const { companyId, isLoading: loadingCompany } = useCompany();
   const { plan } = usePlan();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (searchParams.get('new') === '1') {
+      setShowForm(true);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams]);
 
   const { data: customers = [], isLoading } = useQuery({
     queryKey: ['customers', companyId],

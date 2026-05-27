@@ -3,8 +3,9 @@ import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCompany } from '@/hooks/useCompany';
 import { usePlan } from '@/hooks/usePlan';
-import { useState } from 'react';
-import { TrendingUp, TrendingDown, DollarSign, Plus, X, Filter } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { TrendingUp, TrendingDown, DollarSign, Plus, X } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import PlanGate from '@/components/PlanGate';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -15,7 +16,15 @@ const CATEGORIES_OUT = ['Aluguel', 'Produto/Insumos', 'Equipamento', 'Marketing'
 export default function AppFinanceiro() {
   const { companyId, isLoading: loadingCompany } = useCompany();
   const { plan } = usePlan();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [showForm, setShowForm] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get('new') === '1') {
+      setShowForm(true);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams]);
   const [period, setPeriod] = useState('this_month'); // 'this_month' | 'last_month' | 'all'
   const [form, setForm] = useState({ type: 'entrada', description: '', amount: '', category: 'Atendimento', date: format(new Date(), 'yyyy-MM-dd'), status: 'confirmado' });
   const queryClient = useQueryClient();

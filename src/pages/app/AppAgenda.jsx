@@ -6,6 +6,7 @@ import { useState, useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Plus, X, Calendar } from 'lucide-react';
 import { format, addDays, startOfWeek } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useSearchParams } from 'react-router-dom';
 
 const statusConfig = {
   agendado: { label: 'Agendado', color: 'border-l-blue-400 bg-blue-50', badge: 'bg-blue-100 text-blue-700' },
@@ -25,9 +26,18 @@ const emptyForm = {
 
 export default function AppAgenda() {
   const { company, companyId, isLoading: loadingCompany } = useCompany();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedAppt, setSelectedAppt] = useState(null);
   const [showNewForm, setShowNewForm] = useState(false);
+
+  // Abre o formulário direto quando vem de ?new=1 (ex: ação rápida do dashboard)
+  useEffect(() => {
+    if (searchParams.get('new') === '1') {
+      setShowNewForm(true);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams]);
   const [form, setForm] = useState(emptyForm);
   const [filterPro, setFilterPro] = useState('all');
   const queryClient = useQueryClient();

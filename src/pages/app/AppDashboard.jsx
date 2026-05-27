@@ -325,19 +325,20 @@ export default function AppDashboard() {
               <h3 className="font-bold text-[#1B1C1E] mb-3 text-sm">Ações rápidas</h3>
               <div className="space-y-2">
                 {[
-                  { label: '+ Novo agendamento', href: '/app/agenda' },
-                  { label: '+ Novo cliente', href: '/app/clientes' },
-                  { label: '+ Lançamento financeiro', href: '/app/financeiro' },
+                  { label: '+ Novo agendamento', href: '/app/agenda?new=1' },
+                  { label: '+ Novo cliente', href: '/app/clientes?new=1' },
+                  { label: '+ Lançamento financeiro', href: '/app/financeiro?new=1' },
                 ].map(item => (
                   <Link key={item.href} to={item.href}
-                    className="block text-sm font-medium text-[#1B3A4B] hover:underline py-1">
+                    className="flex items-center gap-2 text-sm font-semibold text-[#1B3A4B] hover:text-[#111111] py-2 px-3 rounded-xl hover:bg-[#F8F7F3] transition-all">
                     {item.label}
                   </Link>
                 ))}
                 {bookingLink && (
                   <a href={bookingLink} target="_blank" rel="noopener noreferrer"
-                    className="block text-sm font-medium text-[#1B3A4B] hover:underline py-1">
-                    🔗 Abrir link de agendamento
+                    className="flex items-center gap-2 text-sm font-semibold text-[#1B3A4B] hover:text-[#111111] py-2 px-3 rounded-xl hover:bg-[#F8F7F3] transition-all">
+                    <Globe className="w-3.5 h-3.5" />
+                    Abrir link de agendamento
                   </a>
                 )}
               </div>
