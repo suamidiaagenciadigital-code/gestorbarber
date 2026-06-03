@@ -1,5 +1,10 @@
 import crypto from 'node:crypto';
 
+// Supabase URL can be VITE_-prefixed (frontend build) or plain (server-only var)
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+// Service role key must be a server-only env var (never VITE_-prefixed)
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
 function verifyStripeSignature(rawBody, sigHeader, secret) {
   const parts = sigHeader.split(',');
   let timestamp = '';
@@ -16,12 +21,16 @@ function verifyStripeSignature(rawBody, sigHeader, secret) {
 }
 
 async function activateCompany(companyId, planName) {
-  const url = `${process.env.SUPABASE_URL}/rest/v1/companies?id=eq.${companyId}`;
+  if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
+    console.error('[stripe-webhook] activateCompany: missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env vars');
+    return null;
+  }
+  const url = `${SUPABASE_URL}/rest/v1/companies?id=eq.${companyId}`;
   const res = await fetch(url, {
     method: 'PATCH',
     headers: {
-      apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-      Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+      apikey: SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
       'Content-Type': 'application/json',
       Prefer: 'return=representation',
     },
@@ -43,7 +52,10 @@ async function activateCompany(companyId, planName) {
 
 async function sendWelcomeEmail(company, ownerEmail, planName) {
   const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) return false;
+  if (!apiKey) {
+    console.warn('[stripe-webhook] sendWelcomeEmail: RESEND_API_KEY not set, skipping email');
+    return false;
+  }
 
   const loginUrl = 'https://gestorbarber.ia.br/admin/login';
   const html = `
@@ -103,16 +115,23 @@ export default async function handler(req, res) {
   const sig = req.headers['stripe-signature'];
   const secret = process.env.STRIPE_WEBHOOK_SECRET;
 
-  console.log('[stripe-webhook] sig present:', !!sig, '| secret present:', !!secret);
+  console.log('[stripe-webhook] sig present:', !!sig, '| secret present:', !!secret, '| supabase_url present:', !!SUPABASE_URL, '| service_role present:', !!SERVICE_ROLE_KEY);
 
   if (!secret) {
     console.error('[stripe-webhook] STRIPE_WEBHOOK_SECRET not set');
     return res.status(500).json({ error: 'Webhook secret not configured' });
   }
 
-  const chunks = [];
-  for await (const chunk of req) chunks.push(chunk);
-  const rawBody = Buffer.concat(chunks).toString('utf8');
+  // Read raw body — must come before any response
+  let rawBody = '';
+  try {
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    rawBody = Buffer.concat(chunks).toString('utf8');
+  } catch (e) {
+    console.error('[stripe-webhook] Failed to read request body:', e.message);
+    return res.status(400).json({ error: 'Could not read request body' });
+  }
 
   console.log('[stripe-webhook] body length:', rawBody.length);
 
@@ -131,29 +150,35 @@ export default async function handler(req, res) {
 
   console.log('[stripe-webhook] event type:', event.type);
 
-  if (event.type === 'checkout.session.completed') {
-    const session = event.data.object;
-    const companyId = session.metadata?.company_id;
-    const planName = session.metadata?.plan_name || 'Essencial';
-    const ownerEmail = session.customer_email || session.customer_details?.email;
+  // Process event — wrapped in try/catch so we always return 200 to Stripe
+  try {
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object;
+      const companyId = session.metadata?.company_id;
+      const planName = session.metadata?.plan_name || 'Essencial';
+      const ownerEmail = session.customer_email || session.customer_details?.email;
 
-    console.log('[stripe-webhook] checkout.session.completed | company:', companyId, '| plan:', planName, '| email:', ownerEmail);
+      console.log('[stripe-webhook] checkout.session.completed | company:', companyId, '| plan:', planName, '| email:', ownerEmail);
 
-    if (companyId) {
-      const company = await activateCompany(companyId, planName);
-      if (!company) {
-        console.error('[stripe-webhook] Failed to activate company', companyId);
-      } else {
-        console.log('[stripe-webhook] Company activated:', companyId);
-        if (ownerEmail) {
-          const sent = await sendWelcomeEmail(company, ownerEmail, planName);
-          console.log('[stripe-webhook] Welcome email sent:', sent, 'to', ownerEmail);
-          if (!sent) console.warn('[stripe-webhook] Welcome email failed for', ownerEmail);
+      if (companyId) {
+        const company = await activateCompany(companyId, planName);
+        if (!company) {
+          console.error('[stripe-webhook] Failed to activate company', companyId);
+        } else {
+          console.log('[stripe-webhook] Company activated:', companyId);
+          if (ownerEmail) {
+            const sent = await sendWelcomeEmail(company, ownerEmail, planName);
+            console.log('[stripe-webhook] Welcome email sent:', sent, 'to', ownerEmail);
+          }
         }
+      } else {
+        console.warn('[stripe-webhook] No company_id in session metadata');
       }
-    } else {
-      console.warn('[stripe-webhook] No company_id in session metadata');
     }
+    // Add more event types here as needed (e.g. invoice.payment_failed, customer.subscription.deleted)
+  } catch (e) {
+    // Internal processing error — still return 200 so Stripe doesn't retry forever
+    console.error('[stripe-webhook] Error processing event:', e.message, e.stack);
   }
 
   return res.status(200).json({ received: true });
