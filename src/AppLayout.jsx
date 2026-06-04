@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link, useLocation, Navigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import {
   Calendar, Users, Briefcase, Scissors, DollarSign, BarChart2,
   Zap, Settings, UserCheck, Home, LogOut, Globe, ArrowLeft, Heart,
@@ -8,7 +8,6 @@ import {
 import { base44 } from '@/api/base44Client';
 import { useCompany } from '@/hooks/useCompany';
 import { useAuth } from '@/lib/AuthContext';
-import { useEffect } from 'react';
 
 const navItems = [
   { label: 'Dashboard',      icon: Home,      path: '/app/dashboard' },
@@ -46,9 +45,20 @@ function GBLogo({ size = 8 }) {
 
 export default function AppLayout({ children }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const { company, companyId, isLoading: loadingCompany } = useCompany();
-  const { isSuperAdmin } = useAuth();
+  const { isSuperAdmin, setAdminSession } = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const handleLogout = async () => {
+    if (isSuperAdmin) {
+      await handleLogout();
+      navigate('/');
+    } else {
+      setAdminSession(null);
+      navigate('/admin/login');
+    }
+  };
 
   const bookingLink = company?.slug ? `${window.location.origin}/agendar/${company.slug}` : null;
   const slugParam = isSuperAdmin ? new URLSearchParams(window.location.search).get('slug') : null;
@@ -118,7 +128,7 @@ export default function AppLayout({ children }) {
         </nav>
 
         <div className="p-4 border-t border-border">
-          <button onClick={() => base44.auth.logout()}
+          <button onClick={() => handleLogout()}
             className="flex items-center gap-2 text-sm text-text-soft hover:text-destructive transition-colors w-full px-3 py-2 rounded-lg hover:bg-red-50">
             <LogOut className="w-4 h-4" />
             Sair
@@ -137,7 +147,7 @@ export default function AppLayout({ children }) {
             </div>
           </div>
           <button
-            onClick={() => base44.auth.logout()}
+            onClick={() => handleLogout()}
             className="p-2 text-gray-400 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50">
             <LogOut className="w-4 h-4" />
           </button>
@@ -236,7 +246,7 @@ export default function AppLayout({ children }) {
                     Voltar ao Master
                   </Link>
                 )}
-                <button onClick={() => base44.auth.logout()}
+                <button onClick={() => handleLogout()}
                   className="flex items-center gap-3 px-4 py-3.5 rounded-2xl text-sm font-medium text-red-500 hover:bg-red-50 transition-all w-full text-left">
                   <LogOut className="w-5 h-5 flex-shrink-0" />
                   Sair da conta
