@@ -6,6 +6,7 @@ import { usePlan } from '@/hooks/usePlan';
 import { useState } from 'react';
 import { Plus, X, Lock } from 'lucide-react';
 import UpgradeModal from '@/components/UpgradeModal';
+import PlanGate from '@/components/PlanGate';
 
 const roleLabels = { admin: 'Admin', recepcao: 'Recepção', barbeiro: 'Barbeiro', financeiro: 'Financeiro' };
 const roleColors = { admin: 'bg-purple-100 text-purple-700', recepcao: 'bg-blue-100 text-blue-700', barbeiro: 'bg-green-100 text-green-700', financeiro: 'bg-yellow-100 text-yellow-700' };
@@ -45,6 +46,14 @@ export default function AppEquipe() {
     if (atLimit) { setShowUpgrade(true); return; }
     setShowForm(true);
   };
+
+  if (!plan.team) {
+    return (
+      <AppLayout>
+        <PlanGate feature="Gestão de equipe" requiredPlan="Profissional" />
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>

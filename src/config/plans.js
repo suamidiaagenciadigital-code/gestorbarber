@@ -14,6 +14,7 @@ export const PLANS = {
     reports: false,
     aiGrowth: false,
     multiUnit: false,
+    team: false,
     upgradeFor: {
       commissions: 'Profissional',
       fullHistory: 'Profissional',
@@ -33,6 +34,7 @@ export const PLANS = {
     reports: true,
     aiGrowth: true,
     multiUnit: false,
+    team: true,
     upgradeFor: {
       multiUnit: 'Premium',
       extraBarbers: 'Premium',
@@ -48,6 +50,7 @@ export const PLANS = {
     reports: true,
     aiGrowth: true,
     multiUnit: true,
+    team: true,
     upgradeFor: {},
   },
 };
