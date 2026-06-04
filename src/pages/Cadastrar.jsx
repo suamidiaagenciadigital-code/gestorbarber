@@ -145,7 +145,14 @@ export default function Cadastrar() {
       setClientSecret(checkoutData.client_secret);
       setStep(3);
     } catch (e) {
-      setError(e.message || 'Erro inesperado.');
+      // Tenta extrair mensagem real da Edge Function (FunctionsHttpError)
+      let msg = 'Erro inesperado. Tente novamente.';
+      try {
+        const body = await e.context?.json?.();
+        if (body?.error) msg = body.error;
+        else if (e.message && !e.message.includes('non-2xx')) msg = e.message;
+      } catch {}
+      setError(msg);
     }
     setLoading(false);
   };
