@@ -49,15 +49,19 @@ export default function MasterPanel() {
     mutationFn: async (data) => {
       // Mapeia plan_name para o campo 'plano' esperado pela Edge Function
       const planoMap = { Essencial: 'starter', Profissional: 'pro', Premium: 'premium' };
+      const planName = data.plan_name || 'Essencial';
       const res = await base44.functions.invoke('createBarbearia', {
         name: data.name,
         nome_fantasia: data.name,
         slug: data.slug,
         owner_email: data.owner_email || '',
         owner_nome: '',
-        plan_name: data.plan_name || 'Essencial',
-        plano: planoMap[data.plan_name] || 'starter',
+        plan_name: planName,
+        plano: planoMap[planName] || 'starter',
+        ciclo: 'mensal',
+        status_cobranca: 'trial',
         status: 'active',
+        limite_usuarios: planName === 'Essencial' ? 1 : planName === 'Profissional' ? 5 : 999,
         gerar_senha_automatica: true,
         enviar_credenciais_email: !!data.owner_email,
         origin: window.location.origin,
