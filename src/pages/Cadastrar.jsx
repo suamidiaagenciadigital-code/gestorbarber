@@ -132,13 +132,19 @@ export default function Cadastrar() {
         },
       });
 
-      if (checkoutErr || !checkoutData?.client_secret) {
+      if (checkoutErr || (!checkoutData?.client_secret && !checkoutData?.checkout_url)) {
         // Rollback: remove empresa criada
         await supabase.functions.invoke('self-signup', {
           body: { action: 'rollback', company_id: signupData.company_id },
         });
         setError(checkoutData?.error || checkoutErr?.message || 'Erro ao iniciar pagamento. Tente novamente.');
         setLoading(false);
+        return;
+      }
+
+      // Fallback: se embedded não estiver disponível, redireciona para hosted checkout
+      if (checkoutData?.checkout_url) {
+        window.location.href = checkoutData.checkout_url;
         return;
       }
 
