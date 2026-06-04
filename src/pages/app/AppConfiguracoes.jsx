@@ -80,7 +80,7 @@ export default function AppConfiguracoes() {
         }
       }
       // Fallback: suporte via WhatsApp
-      window.open('https://wa.me/556299880104?text=Olá, gostaria de cancelar minha assinatura do GestorBarber.', '_blank');
+      window.open('https://wa.me/5562998801004?text=Olá, gostaria de cancelar minha assinatura do GestorBarber.', '_blank');
     } catch {
       toast({ title: 'Erro ao abrir o portal', description: 'Entre em contato com o suporte.', variant: 'destructive' });
     } finally {
@@ -308,7 +308,7 @@ export default function AppConfiguracoes() {
             Precisa de ajuda? Nossa equipe está disponível pelo WhatsApp para te atender.
           </p>
           <a
-            href="https://wa.me/556299880104?text=Olá, preciso de suporte com o GestorBarber."
+            href="https://wa.me/5562998801004?text=Olá, preciso de suporte com o GestorBarber."
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 bg-[#25D366] text-white px-5 py-2.5 rounded-xl font-semibold text-sm hover:bg-[#22C55E] transition-colors">
