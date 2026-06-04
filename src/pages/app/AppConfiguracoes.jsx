@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCompany } from '@/hooks/useCompany';
 import { useAuth } from '@/lib/AuthContext';
 import { useState, useEffect } from 'react';
-import { Save, Globe, Copy, CheckCircle, Loader2, Lock, Eye, EyeOff } from 'lucide-react';
+import { Save, Globe, Copy, CheckCircle, Loader2, Lock, Eye, EyeOff, MessageSquare, AlertTriangle, XCircle } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 
 const DAYS = [
@@ -24,6 +24,8 @@ export default function AppConfiguracoes() {
   const [pwForm, setPwForm] = useState({ nova: '', confirma: '' });
   const [showPw, setShowPw] = useState(false);
   const [pwLoading, setPwLoading] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
 
   const { company, companyId, isLoading } = useCompany();
 
@@ -62,6 +64,29 @@ export default function AppConfiguracoes() {
   const handleSave = () => {
     if (!companyId) return;
     updateMutation.mutate({ id: companyId, data: form });
+  };
+
+  const handleCancelSubscription = async () => {
+    setCancelLoading(true);
+    try {
+      if (company?.stripe_customer_id) {
+        const { data } = await base44.functions.invoke('createPortalSession', {
+          company_id: companyId,
+          return_url: window.location.href,
+        });
+        if (data?.url) {
+          window.location.href = data.url;
+          return;
+        }
+      }
+      // Fallback: suporte via WhatsApp
+      window.open('https://wa.me/556299880104?text=Olá, gostaria de cancelar minha assinatura do GestorBarber.', '_blank');
+    } catch {
+      toast({ title: 'Erro ao abrir o portal', description: 'Entre em contato com o suporte.', variant: 'destructive' });
+    } finally {
+      setCancelLoading(false);
+      setConfirmCancel(false);
+    }
   };
 
   const handleChangePassword = async () => {
@@ -275,6 +300,68 @@ export default function AppConfiguracoes() {
             {updateMutation.isPending ? 'Salvando...' : 'Salvar configurações'}
           </button>
         </div>
+
+        {/* Suporte */}
+        <div className="bg-white rounded-2xl border border-black/8 p-6 mt-6">
+          <h2 className="font-bold text-[#1B1C1E] mb-1">Suporte</h2>
+          <p className="text-gray-500 text-sm mb-4">
+            Precisa de ajuda? Nossa equipe está disponível pelo WhatsApp para te atender.
+          </p>
+          <a
+            href="https://wa.me/556299880104?text=Olá, preciso de suporte com o GestorBarber."
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 bg-[#25D366] text-white px-5 py-2.5 rounded-xl font-semibold text-sm hover:bg-[#22C55E] transition-colors">
+            <MessageSquare className="w-4 h-4" />
+            Falar com o suporte
+          </a>
+        </div>
+
+        {/* Cancelar assinatura */}
+        {adminSession?.user && (
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-6 mt-6 mb-2">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertTriangle className="w-5 h-5 text-red-600" />
+              <h2 className="font-bold text-red-700">Zona de perigo</h2>
+            </div>
+            <p className="text-sm text-red-600/80 mb-1 font-medium">Cancelar assinatura</p>
+            <p className="text-xs text-red-500/70 mb-5 leading-relaxed">
+              Ao cancelar, você continuará com acesso até o fim do período já pago. Após isso, o painel será suspenso.<br />
+              Seus dados ficam armazenados por 30 dias após o cancelamento.
+            </p>
+
+            {!confirmCancel ? (
+              <button
+                onClick={() => setConfirmCancel(true)}
+                className="flex items-center gap-2 border-2 border-red-400 text-red-600 bg-white px-5 py-2.5 rounded-xl font-semibold text-sm hover:bg-red-50 transition-colors">
+                <XCircle className="w-4 h-4" />
+                Cancelar minha assinatura
+              </button>
+            ) : (
+              <div className="bg-white border border-red-300 rounded-xl p-4 space-y-3">
+                <p className="text-sm font-semibold text-red-700">
+                  ⚠️ Tem certeza? Você perderá o acesso ao final do período pago.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setConfirmCancel(false)}
+                    className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors">
+                    Não, voltar
+                  </button>
+                  <button
+                    onClick={handleCancelSubscription}
+                    disabled={cancelLoading}
+                    className="flex-1 flex items-center justify-center gap-2 bg-red-600 text-white px-4 py-2.5 rounded-xl text-sm font-bold hover:bg-red-700 transition-colors disabled:opacity-60">
+                    {cancelLoading
+                      ? <><Loader2 className="w-4 h-4 animate-spin" />Aguarde...</>
+                      : 'Sim, cancelar assinatura'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
       </div>
     </AppLayout>
   );
