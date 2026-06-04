@@ -8,6 +8,7 @@ import {
 import { base44 } from '@/api/base44Client';
 import { useCompany } from '@/hooks/useCompany';
 import { useAuth } from '@/lib/AuthContext';
+import { TrialBanner, TrialExpiredGate } from '@/components/TrialGuard';
 
 const navItems = [
   { label: 'Dashboard',      icon: Home,      path: '/app/dashboard' },
@@ -80,6 +81,7 @@ export default function AppLayout({ children }) {
   }
 
   return (
+    <TrialExpiredGate>
     <div className="min-h-screen bg-warm-bg font-inter flex">
 
       {/* ── Desktop Sidebar ─────────────────────────────────────────── */}
@@ -156,6 +158,7 @@ export default function AppLayout({ children }) {
 
       {/* ── Main Content ────────────────────────────────────────────── */}
       <main className="flex-1 md:ml-64 min-h-screen pt-14 md:pt-0 pb-20 md:pb-0">
+        <TrialBanner />
         {children}
       </main>
 
@@ -257,5 +260,6 @@ export default function AppLayout({ children }) {
         </div>
       )}
     </div>
+    </TrialExpiredGate>
   );
 }

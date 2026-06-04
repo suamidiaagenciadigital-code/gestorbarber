@@ -17,7 +17,7 @@ export default function MasterPanel() {
   const { setAdminSession } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
-  const [form, setForm] = useState({ name: '', owner_email: '', plan_name: 'Starter', status: 'active', slug: '' });
+  const [form, setForm] = useState({ name: '', owner_email: '', plan_name: 'Essencial', status: 'active', slug: '', trial_dias: 7 });
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
 
   const toSlug = (str) =>
@@ -52,6 +52,8 @@ export default function MasterPanel() {
       // Mapeia plan_name para o campo 'plano' esperado pela Edge Function
       const planoMap = { Essencial: 'starter', Profissional: 'pro', Premium: 'premium' };
       const planName = data.plan_name || 'Essencial';
+      const trialAte = new Date();
+      trialAte.setDate(trialAte.getDate() + (Number(data.trial_dias) || 7));
       const res = await base44.functions.invoke('createBarbearia', {
         name: data.name,
         nome_fantasia: data.name,
@@ -62,6 +64,7 @@ export default function MasterPanel() {
         plano: planoMap[planName] || 'starter',
         ciclo: 'mensal',
         status_cobranca: 'trial',
+        trial_ate: trialAte.toISOString(),
         status: 'active',
         limite_usuarios: planName === 'Essencial' ? 1 : planName === 'Profissional' ? 5 : 999,
         gerar_senha_automatica: true,
@@ -74,7 +77,7 @@ export default function MasterPanel() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['master-companies'] });
       setShowForm(false);
-      setForm({ name: '', owner_email: '', plan_name: 'Essencial', status: 'active', slug: '' });
+      setForm({ name: '', owner_email: '', plan_name: 'Essencial', status: 'active', slug: '', trial_dias: 7 });
       setSlugManuallyEdited(false);
       setFormError('');
       if (data.senha_gerada) {
@@ -275,6 +278,16 @@ export default function MasterPanel() {
                   <option value="Essencial">Essencial — R$ 59/mês · 1 barbeiro</option>
                   <option value="Profissional">Profissional — R$ 99/mês · até 5 barbeiros</option>
                   <option value="Premium">Premium — R$ 149/mês · ilimitado</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-500 block mb-1">Duração do trial</label>
+                <select value={form.trial_dias} onChange={e => setForm(p => ({ ...p, trial_dias: Number(e.target.value) }))}
+                  className="w-full px-3 py-2.5 border border-black/10 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3A4B]/20">
+                  <option value={3}>3 dias</option>
+                  <option value={7}>7 dias (padrão)</option>
+                  <option value={14}>14 dias</option>
+                  <option value={30}>30 dias</option>
                 </select>
               </div>
 
