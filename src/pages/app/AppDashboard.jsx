@@ -3,11 +3,68 @@ import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { useCompany } from '@/hooks/useCompany';
 import { useState, useEffect } from 'react';
-import { Calendar, Users, DollarSign, CheckCircle, TrendingUp, Clock, AlertCircle, X, AlertTriangle, Zap, Globe, Copy, Star } from 'lucide-react';
+import { Calendar, Users, DollarSign, CheckCircle, TrendingUp, Clock, AlertCircle, X, AlertTriangle, Zap, Globe, Copy, Star, Play, ChevronDown, ChevronUp, BookOpen, Scissors, BarChart2, Heart, Settings, UserCheck } from 'lucide-react';
 import { usePlan } from '@/hooks/usePlan';
+import { useAuth } from '@/lib/AuthContext';
 import { format, startOfDay, endOfDay, startOfMonth, isToday, differenceInMinutes, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
+
+// ── Tutorial content ────────────────────────────────────────────────────────
+// Add video URLs (YouTube embed or direct mp4) as recordings are made.
+// Leave url: '' to show the "Em breve" placeholder.
+const TUTORIALS = [
+  {
+    category: 'Agenda', icon: Calendar, color: 'bg-blue-50 text-blue-600',
+    videos: [
+      { title: 'Como criar um agendamento manual', url: '', duration: '2 min' },
+      { title: 'Gerenciar status dos atendimentos', url: '', duration: '1 min' },
+      { title: 'Visualizar a agenda semanal', url: '', duration: '1 min' },
+    ],
+  },
+  {
+    category: 'Clientes', icon: Users, color: 'bg-purple-50 text-purple-600',
+    videos: [
+      { title: 'Cadastrar e editar clientes', url: '', duration: '2 min' },
+      { title: 'Marcar cliente como VIP', url: '', duration: '1 min' },
+    ],
+  },
+  {
+    category: 'Serviços', icon: CheckCircle, color: 'bg-green-50 text-green-600',
+    videos: [
+      { title: 'Criar e configurar serviços', url: '', duration: '2 min' },
+      { title: 'Organizar categorias de serviços', url: '', duration: '1 min' },
+    ],
+  },
+  {
+    category: 'Profissionais', icon: Scissors, color: 'bg-yellow-50 text-yellow-600',
+    videos: [
+      { title: 'Cadastrar barbeiro e definir horários', url: '', duration: '3 min' },
+      { title: 'Vincular serviços ao profissional', url: '', duration: '1 min' },
+    ],
+  },
+  {
+    category: 'Financeiro', icon: DollarSign, color: 'bg-emerald-50 text-emerald-600',
+    videos: [
+      { title: 'Registrar entrada e saída', url: '', duration: '2 min' },
+      { title: 'Analisar faturamento do mês', url: '', duration: '2 min' },
+    ],
+  },
+  {
+    category: 'AI Growth', icon: Zap, color: 'bg-amber-50 text-amber-600',
+    videos: [
+      { title: 'Usar a IA para reativar clientes', url: '', duration: '3 min' },
+      { title: 'Gerar campanhas de WhatsApp com IA', url: '', duration: '2 min' },
+    ],
+  },
+  {
+    category: 'Configurações', icon: Settings, color: 'bg-gray-50 text-gray-600',
+    videos: [
+      { title: 'Configurar horários de funcionamento', url: '', duration: '2 min' },
+      { title: 'Personalizar link de agendamento', url: '', duration: '1 min' },
+    ],
+  },
+];
 
 const statusConfig = {
   agendado: { label: 'Agendado', color: 'bg-blue-100 text-blue-700' },
@@ -21,8 +78,22 @@ const statusConfig = {
 export default function AppDashboard() {
   const { company, companyId, isLoading: loadingCompany } = useCompany();
   const { planName } = usePlan();
+  const { isSuperAdmin } = useAuth();
+  const [searchParams] = useSearchParams();
   const [alerts, setAlerts] = useState([]);
   const [dismissedAlerts, setDismissedAlerts] = useState(new Set());
+  const [showTutorials, setShowTutorials] = useState(false);
+  const [tutorialCategory, setTutorialCategory] = useState(0);
+
+  // Build links preserving ?slug= for super admins
+  const slugParam = isSuperAdmin ? searchParams.get('slug') : null;
+  const buildLink = (path, extra = '') => {
+    const sep = extra ? '?' : (slugParam ? '?' : '');
+    if (slugParam && extra) return `${path}?slug=${slugParam}&${extra}`;
+    if (slugParam) return `${path}?slug=${slugParam}`;
+    if (extra) return `${path}?${extra}`;
+    return path;
+  };
 
   const { data: appointments = [], isLoading: loadingAppts } = useQuery({
     queryKey: ['appointments', companyId],
@@ -323,13 +394,13 @@ export default function AppDashboard() {
             {/* Ações rápidas */}
             <div className="bg-white rounded-2xl border border-black/8 p-5">
               <h3 className="font-bold text-[#1B1C1E] mb-3 text-sm">Ações rápidas</h3>
-              <div className="space-y-2">
+              <div className="space-y-1">
                 {[
-                  { label: '+ Novo agendamento', href: '/app/agenda?new=1' },
-                  { label: '+ Novo cliente', href: '/app/clientes?new=1' },
-                  { label: '+ Lançamento financeiro', href: '/app/financeiro?new=1' },
+                  { label: '+ Novo agendamento', to: buildLink('/app/agenda', 'new=1') },
+                  { label: '+ Novo cliente', to: buildLink('/app/clientes', 'new=1') },
+                  { label: '+ Lançamento financeiro', to: buildLink('/app/financeiro', 'new=1') },
                 ].map(item => (
-                  <Link key={item.href} to={item.href}
+                  <Link key={item.to} to={item.to}
                     className="flex items-center gap-2 text-sm font-semibold text-[#1B3A4B] hover:text-[#111111] py-2 px-3 rounded-xl hover:bg-[#F8F7F3] transition-all">
                     {item.label}
                   </Link>
@@ -342,6 +413,54 @@ export default function AppDashboard() {
                   </a>
                 )}
               </div>
+            </div>
+
+            {/* Tutoriais */}
+            <div className="bg-white rounded-2xl border border-black/8 overflow-hidden">
+              <button
+                onClick={() => setShowTutorials(v => !v)}
+                className="w-full flex items-center justify-between p-5 hover:bg-[#F8F7F3] transition-colors">
+                <div className="flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-[#1B3A4B]" />
+                  <h3 className="font-bold text-[#1B1C1E] text-sm">Tutoriais em vídeo</h3>
+                </div>
+                {showTutorials ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+              </button>
+              {showTutorials && (
+                <div className="border-t border-black/8">
+                  {/* Category tabs */}
+                  <div className="flex overflow-x-auto border-b border-black/8 px-3">
+                    {TUTORIALS.map((cat, i) => (
+                      <button key={cat.category} onClick={() => setTutorialCategory(i)}
+                        className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold whitespace-nowrap border-b-2 transition-all ${tutorialCategory === i ? 'border-[#1B3A4B] text-[#1B3A4B]' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>
+                        <cat.icon className="w-3 h-3" />{cat.category}
+                      </button>
+                    ))}
+                  </div>
+                  {/* Videos */}
+                  <div className="p-4 space-y-2">
+                    {TUTORIALS[tutorialCategory].videos.map((v, i) => (
+                      <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-[#F8F7F3] hover:bg-[#F0EDE7] transition-colors">
+                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${TUTORIALS[tutorialCategory].color}`}>
+                          <Play className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-semibold text-[#1B1C1E] truncate">{v.title}</div>
+                          <div className="text-xs text-gray-400">{v.duration}</div>
+                        </div>
+                        {v.url ? (
+                          <a href={v.url} target="_blank" rel="noopener noreferrer"
+                            className="text-xs font-semibold text-[#1B3A4B] hover:underline whitespace-nowrap flex-shrink-0">
+                            Assistir →
+                          </a>
+                        ) : (
+                          <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full flex-shrink-0">Em breve</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

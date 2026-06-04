@@ -3,8 +3,35 @@ import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCompany } from '@/hooks/useCompany';
 import { usePlan } from '@/hooks/usePlan';
-import { useState } from 'react';
-import { Plus, X, Pencil, Scissors, Trash2, Lock, Link2, Calendar, Copy, CheckCircle } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Plus, X, Pencil, Scissors, Trash2, Lock, Link2, Calendar, Copy, CheckCircle, Upload, Loader2 } from 'lucide-react';
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+async function uploadPhoto(companyId, file) {
+  const ext = file.name.split('.').pop() || 'jpg';
+  const path = `${companyId}/${Date.now()}.${ext}`;
+  const tokenKey = Object.keys(localStorage).find(k => k.startsWith('sb-') && k.endsWith('-auth-token'));
+  let accessToken = SUPABASE_ANON_KEY;
+  if (tokenKey) {
+    try { const p = JSON.parse(localStorage.getItem(tokenKey) || '{}'); if (p?.access_token) accessToken = p.access_token; } catch { /* */ }
+  }
+  const resp = await fetch(`${SUPABASE_URL}/storage/v1/object/professionals-photos/${path}`, {
+    method: 'POST',
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': file.type || 'image/jpeg',
+    },
+    body: file,
+  });
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`Upload falhou: ${resp.status} ${text}`);
+  }
+  return `${SUPABASE_URL}/storage/v1/object/public/professionals-photos/${path}`;
+}
 import UpgradeModal from '@/components/UpgradeModal';
 
 const DAYS = [
@@ -37,6 +64,9 @@ export default function AppProfissionais() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [tab, setTab] = useState('info'); // 'info' | 'schedule' | 'services'
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const fileInputRef = useRef(null);
   const queryClient = useQueryClient();
 
   const { data: professionals = [], isLoading } = useQuery({
@@ -237,22 +267,58 @@ export default function AppProfissionais() {
                     </div>
                     <div>
                       <label className="text-xs font-semibold text-gray-500 block mb-1">Foto do Profissional</label>
-                      <input type="url" value={form.photo_url}
-                        onChange={e => setForm(p => ({ ...p, photo_url: e.target.value }))}
-                        onBlur={e => setForm(p => ({ ...p, photo_url: transformPhotoUrl(e.target.value) }))}
-                        placeholder="Cole o link da foto aqui"
-                        className="w-full px-3 py-2.5 border border-black/10 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3A4B]/20" />
-                      {form.photo_url ? (
-                        <div className="mt-2 flex items-center gap-3">
-                          <img src={form.photo_url} alt="Preview" className="w-12 h-12 rounded-xl object-cover border border-black/10"
-                            onError={e => { e.currentTarget.style.opacity = '0.3'; }} />
-                          <p className="text-xs text-green-600 font-medium">Preview da foto</p>
+                      {/* Upload area */}
+                      <div className="flex items-center gap-3">
+                        {form.photo_url ? (
+                          <img src={form.photo_url} alt="Preview"
+                            className="w-16 h-16 rounded-xl object-cover border border-black/10 flex-shrink-0"
+                            onError={e => { e.currentTarget.src = ''; }} />
+                        ) : (
+                          <div className="w-16 h-16 rounded-xl bg-[#1B3A4B]/10 flex items-center justify-center flex-shrink-0">
+                            <Scissors className="w-6 h-6 text-[#1B3A4B]/40" />
+                          </div>
+                        )}
+                        <div className="flex-1 space-y-2">
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              setUploadingPhoto(true);
+                              setUploadError('');
+                              try {
+                                const url = await uploadPhoto(companyId, file);
+                                setForm(p => ({ ...p, photo_url: url }));
+                              } catch (err) {
+                                setUploadError(err.message || 'Erro ao enviar foto');
+                              } finally {
+                                setUploadingPhoto(false);
+                              }
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={uploadingPhoto}
+                            className="flex items-center gap-2 text-xs font-semibold px-3 py-2 border border-black/10 rounded-lg hover:bg-[#F8F7F3] transition-colors disabled:opacity-50">
+                            {uploadingPhoto
+                              ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Enviando...</>
+                              : <><Upload className="w-3.5 h-3.5" />{form.photo_url ? 'Trocar foto' : 'Enviar foto'}</>
+                            }
+                          </button>
+                          {form.photo_url && (
+                            <button type="button" onClick={() => setForm(p => ({ ...p, photo_url: '' }))}
+                              className="text-xs text-red-400 hover:text-red-600 transition-colors">
+                              Remover foto
+                            </button>
+                          )}
                         </div>
-                      ) : (
-                        <p className="text-xs text-gray-400 mt-1.5 leading-relaxed">
-                          Cole o link direto da imagem. <strong>Google Drive:</strong> botão direito na foto → "Obter link" → "Qualquer pessoa" → cole aqui (transformamos automaticamente). Ou use Google Fotos, Imgur, etc.
-                        </p>
-                      )}
+                      </div>
+                      {uploadError && <p className="text-xs text-red-500 mt-1">{uploadError}</p>}
+                      <p className="text-xs text-gray-400 mt-1.5">JPG, PNG ou WebP · máx. 5MB</p>
                     </div>
                     {plan.commissions ? (
                       <div className="grid grid-cols-2 gap-3">
