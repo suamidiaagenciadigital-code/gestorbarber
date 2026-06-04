@@ -371,13 +371,17 @@ export default function LandingPage() {
                     <div className="text-sm font-semibold mb-1" style={{ color: p.highlight ? 'rgba(247,243,236,0.5)' : '#6B6258' }}>{p.name}</div>
                     <div className="flex items-end gap-1 mb-1">
                       <span className="text-4xl font-black font-playfair" style={{ color: p.highlight ? '#C89B3C' : '#111111' }}>
-                        R$ {priceStr}
+                        R$ {annual
+                          ? (p.annual * 12).toLocaleString('pt-BR', { minimumFractionDigits: 2 })
+                          : priceStr}
                       </span>
-                      <span className="text-sm mb-1" style={{ color: p.highlight ? 'rgba(247,243,236,0.4)' : '#9CA3AF' }}>/mês</span>
+                      <span className="text-sm mb-1" style={{ color: p.highlight ? 'rgba(247,243,236,0.4)' : '#9CA3AF' }}>
+                        {annual ? '/ano' : '/mês'}
+                      </span>
                     </div>
                     {annual && (
                       <div className="text-xs mb-2" style={{ color: p.highlight ? '#C89B3C' : '#16A34A' }}>
-                        Você paga R$ {(p.annual * 12).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/ano
+                        R$ {priceStr}/mês equivalente · economize R$ {((p.monthly - p.annual) * 12).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </div>
                     )}
                     <p className="text-xs leading-relaxed mb-6" style={{ color: p.highlight ? 'rgba(247,243,236,0.55)' : '#6B6258' }}>{p.desc}</p>

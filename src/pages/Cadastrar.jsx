@@ -244,13 +244,25 @@ export default function Cadastrar() {
                         <p className="text-xs text-gray-500 mt-0.5">{p.desc}</p>
                         {billing === 'annual' && (
                           <p className="text-xs text-green-600 mt-1 font-medium">
-                            R$ {fmt(p.annualTotal)}/ano — economize R$ {fmt((p.monthly - p.annual) * 12)}
+                            R$ {fmt(p.annual)}/mês equivalente
                           </p>
                         )}
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <span className="font-bold text-[#1B1C1E] text-sm">R$ {fmt(price)}</span>
-                        <span className="text-xs text-gray-400">/mês</span>
+                        {billing === 'annual' ? (
+                          <>
+                            <div>
+                              <span className="font-bold text-[#1B1C1E] text-sm">R$ {fmt(p.annualTotal)}</span>
+                              <span className="text-xs text-gray-400">/ano</span>
+                            </div>
+                            <p className="text-xs text-green-600 font-medium">economize R$ {fmt((p.monthly - p.annual) * 12)}</p>
+                          </>
+                        ) : (
+                          <>
+                            <span className="font-bold text-[#1B1C1E] text-sm">R$ {fmt(p.monthly)}</span>
+                            <span className="text-xs text-gray-400">/mês</span>
+                          </>
+                        )}
                       </div>
                     </button>
                   );
