@@ -67,10 +67,14 @@ Deno.serve(async (req: Request) => {
     name, nome_fantasia, razao_social, cnpj, inscricao_estadual,
     email_contato, telefone_comercial, whatsapp, slug, endereco,
     owner_nome, owner_cpf, owner_email, owner_telefone, owner_data_nascimento,
-    plano, ciclo, valor, data_inicio, proximo_vencimento, status_cobranca,
+    plan_name, plano, ciclo, valor, data_inicio, proximo_vencimento, status_cobranca,
     trial_ate, forma_pagamento, observacoes_internas, limite_usuarios,
     gerar_senha_automatica = true, enviar_credenciais_email = true,
   } = body;
+
+  // Normaliza plan_name: usa o enviado ou deriva do plano legado
+  const planoToName: Record<string, string> = { starter: 'Essencial', pro: 'Profissional', premium: 'Premium' };
+  const resolvedPlanName = plan_name || planoToName[plano || 'starter'] || 'Essencial';
 
   if (!owner_email) return Response.json({ error: 'owner_email obrigatório' }, { status: 400, headers: corsHeaders });
   if (!slug) return Response.json({ error: 'slug obrigatório' }, { status: 400, headers: corsHeaders });
@@ -85,6 +89,7 @@ Deno.serve(async (req: Request) => {
     name: nome_fantasia || name, nome_fantasia, razao_social, cnpj, inscricao_estadual,
     email_contato, telefone_comercial, whatsapp, slug, endereco,
     owner_nome, owner_cpf, owner_email, owner_telefone, owner_data_nascimento,
+    plan_name: resolvedPlanName,
     plano: plano || 'starter', ciclo: ciclo || 'mensal', valor, data_inicio,
     proximo_vencimento, status_cobranca: status_cobranca || 'trial', trial_ate,
     forma_pagamento, observacoes_internas, limite_usuarios: limite_usuarios || 3,

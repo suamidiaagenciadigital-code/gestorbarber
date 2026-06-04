@@ -107,12 +107,10 @@ export default function Onboarding() {
             </div>
           ))}
         </div>
-        {company?.plan_name && (
-          <div className="mt-auto pt-6 border-t border-white/10">
-            <p className="text-xs text-white/40">Plano ativo</p>
-            <p className="text-sm font-bold text-[#C89B3C] mt-0.5">{company.plan_name}</p>
-          </div>
-        )}
+        <div className="mt-auto pt-6 border-t border-white/10">
+          <p className="text-xs text-white/40">Plano ativo</p>
+          <p className="text-sm font-bold text-[#C89B3C] mt-0.5">{plan.label}</p>
+        </div>
       </div>
 
       {/* Main content */}
@@ -197,7 +195,7 @@ export default function Onboarding() {
           {step === 3 && (
             <div className="space-y-3">
               <p className="text-xs text-gray-500 bg-black/5 rounded-lg px-3 py-2">
-                Seu plano <strong>{company?.plan_name}</strong> permite até{' '}
+                Seu plano <strong>{plan.label}</strong> permite até{' '}
                 <strong>{plan.maxBarbers === Infinity ? 'ilimitados' : plan.maxBarbers}</strong> profissional{plan.maxBarbers === 1 ? '' : 'is'}.
               </p>
               {professionals.slice(0, plan.maxBarbers === Infinity ? professionals.length : plan.maxBarbers).map((p, i) => (
