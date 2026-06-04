@@ -33,17 +33,27 @@ export default function ActionCards({ company, customers, appointments, services
   const busiestPro = Object.entries(proLoad).sort((a, b) => b[1] - a[1])[0];
   const busiestPct = busiestPro && totalMonthAppts > 0 ? Math.round((busiestPro[1] / totalMonthAppts) * 100) : 0;
 
-  // Dia mais fraco — só calcula quando há agendamentos suficientes
-  const dayNames = ['Domingo', 'Segunda', 'Terca', 'Quarta', 'Quinta', 'Sexta', 'Sabado'];
+  // Dia mais fraco — só considera dias que a barbearia está aberta
+  const dayNames   = ['Domingo', 'Segunda', 'Terca', 'Quarta', 'Quinta', 'Sexta', 'Sabado'];
+  const dayKeyMap  = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
   const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, 1);
   const recentAppts = appointments.filter(a => new Date(a.scheduled_at) >= threeMonthsAgo);
   const dayCounts = [0, 0, 0, 0, 0, 0, 0];
   recentAppts.forEach(a => { dayCounts[new Date(a.scheduled_at).getDay()]++; });
   const hasEnoughData = recentAppts.length >= 7;
-  const weakestDayIdx = hasEnoughData
-    ? dayCounts.reduce((minI, v, i) => (v < dayCounts[minI] ? i : minI), 1) // começa de segunda (1), ignora domingo
+
+  // Filtra apenas dias em que a barbearia funciona
+  const openDayIndices = [0,1,2,3,4,5,6].filter(i => {
+    const key = dayKeyMap[i];
+    if (!company?.business_hours) return i !== 0; // fallback: exclui domingo
+    return company.business_hours[key]?.active === true;
+  });
+
+  const weakestDayIdx = hasEnoughData && openDayIndices.length > 0
+    ? openDayIndices.reduce((minI, i) => (dayCounts[i] < dayCounts[minI] ? i : minI), openDayIndices[0])
     : null;
   const weakestDay = weakestDayIdx !== null ? dayNames[weakestDayIdx] : null;
+  const openDayNames = openDayIndices.map(i => dayNames[i]);
 
   // Serviço mais lucrativo
   const serviceRevenue = {};
@@ -114,7 +124,8 @@ Dados reais da barbearia "${company?.name || 'cliente'}":
 - Clientes inativos ha +30 dias: ${inactiveList.join(', ') || 'nenhum'}
 - Top servicos por faturamento: ${topSvcs.join(', ') || 'sem dados ainda'}
 - Profissionais ativos: ${professionals.map(p => p.name).join(', ') || 'sem dados'}
-- Dia mais fraco: ${weakestDay || 'sem dados suficientes'}
+- Dias de funcionamento: ${openDayNames.join(', ') || 'nao informado'} (NUNCA sugira acoes para dias fechados)
+- Dia mais fraco (entre os dias abertos): ${weakestDay || 'sem dados suficientes'}
 - Profissional mais ocupado: ${busiestPro ? `${busiestPro[0]} (${busiestPct}% do movimento)` : 'sem dados'}
 
 Gere EXATAMENTE 3 recomendacoes praticas e especificas para ESTA barbearia crescer agora.
