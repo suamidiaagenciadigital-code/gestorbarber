@@ -227,7 +227,7 @@ export default function AppConfiguracoes() {
 
           {/* Password change — only for barbearia owners (adminSession) */}
           {adminSession?.user && (
-            <div className="bg-white rounded-2xl border border-black/8 p-6">
+            <div className="bg-white rounded-2xl border border-black/8 p-6 mt-6">
               <div className="flex items-center gap-2 mb-5">
                 <Lock className="w-4 h-4 text-[#1B3A4B]" />
                 <h2 className="font-bold text-[#1B1C1E]">Segurança — Alterar senha</h2>
@@ -267,7 +267,6 @@ export default function AppConfiguracoes() {
               </button>
             </div>
           )}
-        </div>
 
         <div className="mt-6">
           <button onClick={handleSave} disabled={updateMutation.isPending || !companyId}
