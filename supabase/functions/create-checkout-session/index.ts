@@ -1,11 +1,5 @@
 import { corsHeaders, handleCors } from '../_shared/cors.ts';
 
-const PRICE_IDS: Record<string, string | undefined> = {
-  Essencial:    undefined, // set via env STRIPE_PRICE_ESSENCIAL
-  Profissional: undefined,
-  Premium:      undefined,
-};
-
 Deno.serve(async (req: Request) => {
   const cors = handleCors(req);
   if (cors) return cors;
@@ -16,32 +10,57 @@ Deno.serve(async (req: Request) => {
   }
 
   const body = await req.json();
-  const { company_id, plan_name, owner_email, success_url, cancel_url } = body;
+  const {
+    company_id,
+    plan_name,
+    billing_period = 'monthly',   // 'monthly' | 'annual'
+    owner_email,
+    success_url,
+    cancel_url,
+    return_url,
+    ui_mode = 'hosted',           // 'hosted' | 'embedded'
+  } = body;
 
-  if (!company_id || !plan_name || !success_url) {
+  if (!company_id || !plan_name) {
     return Response.json({ error: 'Parâmetros ausentes.' }, { status: 400, headers: corsHeaders });
   }
 
+  // Resolve price ID: annual first, fallback to monthly, fallback to Essencial
+  const planKey = plan_name.toUpperCase();
   const priceId =
-    Deno.env.get(`STRIPE_PRICE_${plan_name.toUpperCase()}`) ||
+    (billing_period === 'annual' && Deno.env.get(`STRIPE_PRICE_${planKey}_ANNUAL`)) ||
+    Deno.env.get(`STRIPE_PRICE_${planKey}`) ||
     Deno.env.get('STRIPE_PRICE_ESSENCIAL');
 
   if (!priceId) {
-    return Response.json({ error: `Price ID não configurado para o plano ${plan_name}.` }, { status: 500, headers: corsHeaders });
+    return Response.json(
+      { error: `Price ID não configurado para o plano ${plan_name}.` },
+      { status: 500, headers: corsHeaders },
+    );
   }
+
+  const isEmbedded = ui_mode === 'embedded';
 
   const params = new URLSearchParams({
     mode: 'subscription',
     'line_items[0][price]': priceId,
     'line_items[0][quantity]': '1',
-    success_url: success_url,
-    cancel_url: cancel_url || success_url,
     allow_promotion_codes: 'true',
     'metadata[company_id]': company_id,
     'metadata[plan_name]': plan_name,
+    'metadata[billing_period]': billing_period,
     'subscription_data[metadata][company_id]': company_id,
     'subscription_data[metadata][plan_name]': plan_name,
+    'subscription_data[metadata][billing_period]': billing_period,
   });
+
+  if (isEmbedded) {
+    params.set('ui_mode', 'embedded');
+    params.set('return_url', return_url || success_url || '');
+  } else {
+    params.set('success_url', success_url || '');
+    params.set('cancel_url', cancel_url || success_url || '');
+  }
 
   if (owner_email) params.set('customer_email', owner_email);
 
@@ -57,8 +76,14 @@ Deno.serve(async (req: Request) => {
   const session = await res.json();
 
   if (!res.ok) {
-    return Response.json({ error: session.error?.message || 'Erro ao criar sessão Stripe.' }, { status: 500, headers: corsHeaders });
+    return Response.json(
+      { error: session.error?.message || 'Erro ao criar sessão Stripe.' },
+      { status: 500, headers: corsHeaders },
+    );
   }
 
+  if (isEmbedded) {
+    return Response.json({ client_secret: session.client_secret }, { headers: corsHeaders });
+  }
   return Response.json({ checkout_url: session.url }, { headers: corsHeaders });
 });
