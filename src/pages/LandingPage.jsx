@@ -394,7 +394,7 @@ export default function LandingPage() {
 
                   <div className="px-8 pb-8">
                     <button
-                      onClick={() => navigate(`/cadastrar?plano=${p.name.toLowerCase()}`)}
+                      onClick={() => navigate(`/cadastrar?plano=${p.name.toLowerCase()}${annual ? '&cobranca=anual' : ''}`)}
                       className="w-full py-3 rounded-xl font-semibold text-sm transition-all"
                       style={p.highlight
                         ? { background: '#C89B3C', color: '#111111' }

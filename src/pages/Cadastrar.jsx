@@ -1,11 +1,7 @@
 import { useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
-import { loadStripe } from '@stripe/stripe-js';
-import { EmbeddedCheckout, EmbeddedCheckoutProvider } from '@stripe/react-stripe-js';
-import { Eye, EyeOff, Check, ArrowRight, ArrowLeft, Scissors, ShieldCheck } from 'lucide-react';
-
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+import { Eye, EyeOff, Check, ArrowRight, ArrowLeft, Scissors } from 'lucide-react';
 
 const PLANS = [
   {
@@ -41,7 +37,11 @@ export default function Cadastrar() {
   const [params] = useSearchParams();
 
   const [step, setStep] = useState(1);
-  const [billing, setBilling] = useState('monthly');
+
+  const [billing, setBilling] = useState(() =>
+    params.get('cobranca') === 'anual' ? 'annual' : 'monthly'
+  );
+
   const [plan, setPlan] = useState(() => {
     const raw = params.get('plano') || '';
     const map = { essencial: 'Essencial', profissional: 'Profissional', premium: 'Premium' };
@@ -56,7 +56,6 @@ export default function Cadastrar() {
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [clientSecret, setClientSecret] = useState('');
 
   const selectedPlan = PLANS.find(p => p.name === plan);
   const displayPrice = billing === 'annual' ? selectedPlan?.annual : selectedPlan?.monthly;
@@ -120,20 +119,19 @@ export default function Cadastrar() {
         return;
       }
 
-      // 2. Criar sessão de checkout embutida
+      // 2. Criar sessão de checkout (hosted)
       const { data: checkoutData, error: checkoutErr } = await supabase.functions.invoke('create-checkout-session', {
         body: {
           company_id: signupData.company_id,
           plan_name: plan,
           billing_period: billing,
           owner_email: form.owner_email,
-          ui_mode: 'embedded',
-          return_url: `${origin}/cadastrar/sucesso?email=${encodeURIComponent(form.owner_email)}&session_id={CHECKOUT_SESSION_ID}`,
+          success_url: `${origin}/cadastrar/sucesso?email=${encodeURIComponent(form.owner_email)}`,
+          cancel_url: `${origin}/cadastrar?plano=${plan.toLowerCase()}&cobranca=${billing === 'annual' ? 'anual' : 'mensal'}`,
         },
       });
 
-      if (checkoutErr || (!checkoutData?.client_secret && !checkoutData?.checkout_url)) {
-        // Rollback: remove empresa criada
+      if (checkoutErr || !checkoutData?.checkout_url) {
         await supabase.functions.invoke('self-signup', {
           body: { action: 'rollback', company_id: signupData.company_id },
         });
@@ -142,16 +140,10 @@ export default function Cadastrar() {
         return;
       }
 
-      // Fallback: se embedded não estiver disponível, redireciona para hosted checkout
-      if (checkoutData?.checkout_url) {
-        window.location.href = checkoutData.checkout_url;
-        return;
-      }
+      // 3. Redirecionar para o checkout do Stripe
+      window.location.href = checkoutData.checkout_url;
 
-      setClientSecret(checkoutData.client_secret);
-      setStep(3);
     } catch (e) {
-      // Tenta extrair mensagem real da Edge Function (FunctionsHttpError)
       let msg = 'Erro inesperado. Tente novamente.';
       try {
         const body = await e.context?.json?.();
@@ -159,11 +151,9 @@ export default function Cadastrar() {
         else if (e.message && !e.message.includes('non-2xx')) msg = e.message;
       } catch {}
       setError(msg);
+      setLoading(false);
     }
-    setLoading(false);
   };
-
-  const STEPS = ['Plano', 'Conta', 'Pagamento'];
 
   return (
     <div className="min-h-screen bg-[#F8F7F3] font-inter flex flex-col">
@@ -184,23 +174,19 @@ export default function Cadastrar() {
         <div className="w-full max-w-xl">
 
           {/* Indicador de etapas */}
-          <div className="flex items-center justify-center gap-2 mb-8">
-            {STEPS.map((label, i) => {
+          <div className="flex items-center gap-2 mb-8 justify-center">
+            {[{ label: 'Plano' }, { label: 'Conta' }].map(({ label }, i) => {
               const s = i + 1;
-              const done = s < step;
-              const active = s === step;
               return (
                 <div key={s} className="flex items-center gap-2">
                   <div className="flex flex-col items-center gap-1">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all
-                      ${done ? 'bg-[#C89B3C] text-white' : active ? 'bg-[#1B3A4B] text-white' : 'bg-black/10 text-gray-400'}`}>
-                      {done ? <Check className="w-4 h-4" /> : s}
+                      ${s < step ? 'bg-[#C89B3C] text-white' : s === step ? 'bg-[#1B3A4B] text-white' : 'bg-black/10 text-gray-400'}`}>
+                      {s < step ? <Check className="w-4 h-4" /> : s}
                     </div>
-                    <span className={`text-xs font-medium hidden sm:block ${active ? 'text-[#1B1C1E]' : 'text-gray-400'}`}>{label}</span>
+                    <span className={`text-xs font-medium hidden sm:block ${s === step ? 'text-[#1B1C1E]' : 'text-gray-400'}`}>{label}</span>
                   </div>
-                  {i < STEPS.length - 1 && (
-                    <div className={`w-12 h-0.5 mb-4 ${done ? 'bg-[#C89B3C]' : 'bg-black/10'}`} />
-                  )}
+                  {i < 1 && <div className={`w-12 h-0.5 mb-4 ${s < step ? 'bg-[#C89B3C]' : 'bg-black/10'}`} />}
                 </div>
               );
             })}
@@ -356,7 +342,7 @@ export default function Cadastrar() {
                   className="w-full bg-[#C89B3C] text-[#111111] py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-[#B8892F] transition-colors disabled:opacity-60">
                   {loading
                     ? <><span className="w-4 h-4 border-2 border-[#111]/20 border-t-[#111] rounded-full animate-spin" /> Criando conta...</>
-                    : <> Continuar para pagamento <ArrowRight className="w-4 h-4" /></>}
+                    : <>Criar conta e pagar <ArrowRight className="w-4 h-4" /></>}
                 </button>
 
                 <p className="text-xs text-gray-400 text-center">
@@ -370,25 +356,6 @@ export default function Cadastrar() {
                 className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-600 mt-4 mx-auto">
                 <ArrowLeft className="w-3.5 h-3.5" /> Voltar
               </button>
-            </div>
-          )}
-
-          {/* ── PASSO 3: Checkout embutido ── */}
-          {step === 3 && clientSecret && (
-            <div>
-              <h1 className="text-2xl font-black text-[#1B1C1E] mb-1 text-center">Dados de pagamento</h1>
-              <p className="text-gray-500 text-sm text-center mb-2">
-                Plano <strong>{plan}</strong> · {billing === 'annual' ? 'Anual' : 'Mensal'} · R$ {fmt(displayPrice ?? 0)}/mês
-              </p>
-              <div className="flex items-center justify-center gap-1.5 text-xs text-gray-400 mb-6">
-                <ShieldCheck className="w-3.5 h-3.5 text-green-500" />
-                Pagamento 100% seguro via Stripe
-              </div>
-              <div className="bg-white rounded-2xl border border-black/8 overflow-hidden">
-                <EmbeddedCheckoutProvider stripe={stripePromise} options={{ clientSecret }}>
-                  <EmbeddedCheckout />
-                </EmbeddedCheckoutProvider>
-              </div>
             </div>
           )}
 
