@@ -1,70 +1,44 @@
 import AppLayout from '@/components/layout/AppLayout';
 import { base44 } from '@/api/base44Client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCompany } from '@/hooks/useCompany';
 import { useState, useEffect } from 'react';
-import { Calendar, Users, DollarSign, CheckCircle, TrendingUp, Clock, AlertCircle, X, AlertTriangle, Zap, Globe, Copy, Star, Play, ChevronDown, ChevronUp, BookOpen, Scissors, BarChart2, Heart, Settings, UserCheck } from 'lucide-react';
+import { Calendar, Users, DollarSign, CheckCircle, TrendingUp, Clock, AlertCircle, X, AlertTriangle, Zap, Globe, Copy, Star, Play, ChevronDown, ChevronUp, BookOpen, Scissors, Settings, Bell } from 'lucide-react';
 import { usePlan } from '@/hooks/usePlan';
 import { useAuth } from '@/lib/AuthContext';
 import { format, startOfDay, endOfDay, startOfMonth, isToday, differenceInMinutes, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Link, useSearchParams } from 'react-router-dom';
 
-// ── Tutorial content ────────────────────────────────────────────────────────
-// Add video URLs (YouTube embed or direct mp4) as recordings are made.
-// Leave url: '' to show the "Em breve" placeholder.
-const TUTORIALS = [
-  {
-    category: 'Agenda', icon: Calendar, color: 'bg-blue-50 text-blue-600',
-    videos: [
-      { title: 'Como criar um agendamento manual', url: '', duration: '2 min' },
-      { title: 'Gerenciar status dos atendimentos', url: '', duration: '1 min' },
-      { title: 'Visualizar a agenda semanal', url: '', duration: '1 min' },
-    ],
-  },
-  {
-    category: 'Clientes', icon: Users, color: 'bg-purple-50 text-purple-600',
-    videos: [
-      { title: 'Cadastrar e editar clientes', url: '', duration: '2 min' },
-      { title: 'Marcar cliente como VIP', url: '', duration: '1 min' },
-    ],
-  },
-  {
-    category: 'Serviços', icon: CheckCircle, color: 'bg-green-50 text-green-600',
-    videos: [
-      { title: 'Criar e configurar serviços', url: '', duration: '2 min' },
-      { title: 'Organizar categorias de serviços', url: '', duration: '1 min' },
-    ],
-  },
-  {
-    category: 'Profissionais', icon: Scissors, color: 'bg-yellow-50 text-yellow-600',
-    videos: [
-      { title: 'Cadastrar barbeiro e definir horários', url: '', duration: '3 min' },
-      { title: 'Vincular serviços ao profissional', url: '', duration: '1 min' },
-    ],
-  },
-  {
-    category: 'Financeiro', icon: DollarSign, color: 'bg-emerald-50 text-emerald-600',
-    videos: [
-      { title: 'Registrar entrada e saída', url: '', duration: '2 min' },
-      { title: 'Analisar faturamento do mês', url: '', duration: '2 min' },
-    ],
-  },
-  {
-    category: 'AI Growth', icon: Zap, color: 'bg-amber-50 text-amber-600',
-    videos: [
-      { title: 'Usar a IA para reativar clientes', url: '', duration: '3 min' },
-      { title: 'Gerar campanhas de WhatsApp com IA', url: '', duration: '2 min' },
-    ],
-  },
-  {
-    category: 'Configurações', icon: Settings, color: 'bg-gray-50 text-gray-600',
-    videos: [
-      { title: 'Configurar horários de funcionamento', url: '', duration: '2 min' },
-      { title: 'Personalizar link de agendamento', url: '', duration: '1 min' },
-    ],
-  },
-];
+// ── Helpers ──────────────────────────────────────────────────────────────────
+const CAT_CONFIG = {
+  agenda:          { icon: Calendar,    color: 'bg-blue-50 text-blue-600' },
+  clientes:        { icon: Users,       color: 'bg-purple-50 text-purple-600' },
+  servicos:        { icon: CheckCircle, color: 'bg-green-50 text-green-600' },
+  profissionais:   { icon: Scissors,    color: 'bg-yellow-50 text-yellow-600' },
+  financeiro:      { icon: DollarSign,  color: 'bg-emerald-50 text-emerald-600' },
+  'ai-growth':     { icon: Zap,         color: 'bg-amber-50 text-amber-600' },
+  configuracoes:   { icon: Settings,    color: 'bg-gray-50 text-gray-600' },
+  geral:           { icon: BookOpen,    color: 'bg-indigo-50 text-indigo-600' },
+};
+
+/** Convert share URL → embeddable iframe src */
+function toEmbedUrl(url = '') {
+  if (!url) return null;
+  // YouTube
+  const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&?\s]+)/);
+  if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1`;
+  // YouTube embed already
+  if (url.includes('youtube.com/embed/')) return url;
+  // Loom
+  const loomMatch = url.match(/loom\.com\/share\/([^?&\s]+)/);
+  if (loomMatch) return `https://www.loom.com/embed/${loomMatch[1]}?autoplay=1`;
+  // Vimeo
+  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+  if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1`;
+  // Direct mp4 or other — not embeddable as iframe, open new tab
+  return null;
+}
 
 const statusConfig = {
   agendado: { label: 'Agendado', color: 'bg-blue-100 text-blue-700' },
@@ -83,7 +57,27 @@ export default function AppDashboard() {
   const [alerts, setAlerts] = useState([]);
   const [dismissedAlerts, setDismissedAlerts] = useState(new Set());
   const [showTutorials, setShowTutorials] = useState(false);
-  const [tutorialCategory, setTutorialCategory] = useState(0);
+  const [tutorialCategory, setTutorialCategory] = useState('agenda');
+  const [videoModal, setVideoModal] = useState(null); // { title, url }
+
+  const { data: contentItems = [] } = useQuery({
+    queryKey: ['content-items-public'],
+    queryFn: () => base44.entities.ContentItem.filter({ active: true }, '-sort_order', 200),
+    staleTime: 5 * 60_000,
+  });
+
+  const tutorials = contentItems.filter(i => i.type === 'tutorial');
+  const notices = contentItems.filter(i => {
+    if (i.type !== 'notice') return false;
+    if (i.starts_at && new Date(i.starts_at) > now) return false;
+    if (i.ends_at && new Date(i.ends_at) < now) return false;
+    return true;
+  });
+  const ads = contentItems.filter(i => i.type === 'ad');
+
+  // Group tutorials by category
+  const tutorialCategories = [...new Set(tutorials.map(t => t.category || 'geral'))];
+  const currentCatTutorials = tutorials.filter(t => (t.category || 'geral') === tutorialCategory);
 
   // Build links preserving ?slug= for super admins
   const slugParam = isSuperAdmin ? searchParams.get('slug') : null;
@@ -292,6 +286,40 @@ export default function AppDashboard() {
           </div>
         )}
 
+        {/* Notices from master */}
+        {notices.map(notice => (
+          <div key={notice.id} className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 mb-4 flex items-start gap-3">
+            <Bell className="w-4 h-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-yellow-800">{notice.title}</p>
+              {notice.description && <p className="text-xs text-yellow-700 mt-0.5">{notice.description}</p>}
+              {notice.url && (
+                <a href={notice.url} target="_blank" rel="noopener noreferrer"
+                  className="text-xs font-semibold text-yellow-700 underline mt-1 inline-block">Saiba mais →</a>
+              )}
+            </div>
+          </div>
+        ))}
+
+        {/* Ads from master */}
+        {ads.map(ad => (
+          <div key={ad.id} className="rounded-2xl overflow-hidden border border-[#C89B3C]/30 mb-4">
+            {ad.image_url && <img src={ad.image_url} alt={ad.title} className="w-full h-32 object-cover" />}
+            <div className="bg-gradient-to-r from-[#C89B3C]/10 to-[#C89B3C]/5 p-4 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-bold text-[#1B1C1E]">{ad.title}</p>
+                {ad.description && <p className="text-xs text-gray-500 mt-0.5">{ad.description}</p>}
+              </div>
+              {ad.url && (
+                <a href={ad.url} target="_blank" rel="noopener noreferrer"
+                  className="flex-shrink-0 bg-[#C89B3C] text-[#111111] text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-[#B8892F] transition-colors">
+                  Ver mais
+                </a>
+              )}
+            </div>
+          </div>
+        ))}
+
         {/* KPI Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           {[
@@ -423,48 +451,98 @@ export default function AppDashboard() {
                 <div className="flex items-center gap-2">
                   <BookOpen className="w-4 h-4 text-[#1B3A4B]" />
                   <h3 className="font-bold text-[#1B1C1E] text-sm">Tutoriais em vídeo</h3>
+                  {tutorials.length > 0 && (
+                    <span className="text-xs bg-[#1B3A4B]/10 text-[#1B3A4B] font-bold px-1.5 py-0.5 rounded-full">{tutorials.length}</span>
+                  )}
                 </div>
                 {showTutorials ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
               </button>
+
               {showTutorials && (
                 <div className="border-t border-black/8">
-                  {/* Category tabs */}
-                  <div className="flex overflow-x-auto border-b border-black/8 px-3">
-                    {TUTORIALS.map((cat, i) => (
-                      <button key={cat.category} onClick={() => setTutorialCategory(i)}
-                        className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold whitespace-nowrap border-b-2 transition-all ${tutorialCategory === i ? 'border-[#1B3A4B] text-[#1B3A4B]' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>
-                        <cat.icon className="w-3 h-3" />{cat.category}
-                      </button>
-                    ))}
-                  </div>
-                  {/* Videos */}
-                  <div className="p-4 space-y-2">
-                    {TUTORIALS[tutorialCategory].videos.map((v, i) => (
-                      <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-[#F8F7F3] hover:bg-[#F0EDE7] transition-colors">
-                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${TUTORIALS[tutorialCategory].color}`}>
-                          <Play className="w-4 h-4" />
+                  {tutorials.length === 0 ? (
+                    <div className="p-6 text-center text-sm text-gray-400">Nenhum tutorial disponível ainda</div>
+                  ) : (
+                    <>
+                      {/* Category tabs */}
+                      {tutorialCategories.length > 1 && (
+                        <div className="flex overflow-x-auto border-b border-black/8 px-3">
+                          {tutorialCategories.map(cat => {
+                            const cfg = CAT_CONFIG[cat] || CAT_CONFIG.geral;
+                            const Icon = cfg.icon;
+                            return (
+                              <button key={cat} onClick={() => setTutorialCategory(cat)}
+                                className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold whitespace-nowrap border-b-2 transition-all capitalize ${tutorialCategory === cat ? 'border-[#1B3A4B] text-[#1B3A4B]' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>
+                                <Icon className="w-3 h-3" />{cat.replace('-', ' ')}
+                              </button>
+                            );
+                          })}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-semibold text-[#1B1C1E] truncate">{v.title}</div>
-                          <div className="text-xs text-gray-400">{v.duration}</div>
-                        </div>
-                        {v.url ? (
-                          <a href={v.url} target="_blank" rel="noopener noreferrer"
-                            className="text-xs font-semibold text-[#1B3A4B] hover:underline whitespace-nowrap flex-shrink-0">
-                            Assistir →
-                          </a>
-                        ) : (
-                          <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full flex-shrink-0">Em breve</span>
-                        )}
+                      )}
+                      {/* Videos */}
+                      <div className="p-4 space-y-2">
+                        {currentCatTutorials.map(v => {
+                          const cfg = CAT_CONFIG[v.category || 'geral'] || CAT_CONFIG.geral;
+                          const embedUrl = toEmbedUrl(v.url);
+                          return (
+                            <div key={v.id} className="flex items-center gap-3 p-3 rounded-xl bg-[#F8F7F3] hover:bg-[#F0EDE7] transition-colors">
+                              <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${cfg.color}`}>
+                                <Play className="w-4 h-4" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-semibold text-[#1B1C1E] truncate">{v.title}</div>
+                                {v.duration && <div className="text-xs text-gray-400">{v.duration}</div>}
+                              </div>
+                              {v.url ? (
+                                embedUrl ? (
+                                  <button onClick={() => setVideoModal({ title: v.title, embedUrl })}
+                                    className="text-xs font-semibold text-[#1B3A4B] hover:underline whitespace-nowrap flex-shrink-0 flex items-center gap-1">
+                                    <Play className="w-3 h-3" />Assistir
+                                  </button>
+                                ) : (
+                                  <a href={v.url} target="_blank" rel="noopener noreferrer"
+                                    className="text-xs font-semibold text-[#1B3A4B] hover:underline whitespace-nowrap flex-shrink-0">
+                                    Abrir →
+                                  </a>
+                                )
+                              ) : (
+                                <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full flex-shrink-0">Em breve</span>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
-                    ))}
-                  </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>
           </div>
         </div>
       </div>
+
+      {/* Video modal */}
+      {videoModal && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={() => setVideoModal(null)}>
+          <div className="bg-black rounded-2xl overflow-hidden w-full max-w-3xl shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-3 bg-[#111111]">
+              <span className="text-white font-semibold text-sm truncate">{videoModal.title}</span>
+              <button onClick={() => setVideoModal(null)} className="text-white/60 hover:text-white ml-4 flex-shrink-0">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="relative" style={{ paddingBottom: '56.25%' }}>
+              <iframe
+                src={videoModal.embedUrl}
+                title={videoModal.title}
+                allow="autoplay; fullscreen; picture-in-picture"
+                allowFullScreen
+                className="absolute inset-0 w-full h-full border-0"
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* AI Bottleneck Alerts */}
       {visibleAlerts.length > 0 && (

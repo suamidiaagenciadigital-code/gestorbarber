@@ -78,6 +78,7 @@ const TABLE_MAP = {
   AppConfig:       'app_configs',
   ServiceCategory: 'service_categories',
   Lead:            'leads',
+  ContentItem:     'content_items',
 };
 
 function makeEntity(entityName) {

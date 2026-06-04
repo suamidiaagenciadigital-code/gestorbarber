@@ -1,7 +1,7 @@
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
-import { Scissors, Plus, Globe, CheckCircle, XCircle, Clock, X, ExternalLink, Trash2 } from 'lucide-react';
+import { Scissors, Plus, Globe, CheckCircle, XCircle, Clock, X, ExternalLink, Trash2, BookOpen } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -77,6 +77,9 @@ export default function MasterPanel() {
           <Link to="/master/barbearias" className="text-xs text-white/60 hover:text-white">Barbearias</Link>
           <Link to="/master/financeiro" className="text-xs text-white/60 hover:text-white">Financeiro</Link>
           <Link to="/" className="text-xs text-white/60 hover:text-white">← LP Pública</Link>
+          <Link to="/master/conteudo" className="flex items-center gap-1.5 text-xs text-white/60 hover:text-white">
+            <BookOpen className="w-3.5 h-3.5" />Conteúdo
+          </Link>
           {companies[0]?.slug && (
             <Link to={`/app/dashboard?slug=${companies[0].slug}`} className="text-xs text-white/60 hover:text-white">App →</Link>
           )}
