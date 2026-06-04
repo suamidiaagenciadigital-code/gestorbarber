@@ -2,7 +2,8 @@ import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, X, Pencil, Trash2, Play, Bell, Megaphone, ArrowLeft, Eye, EyeOff, GripVertical } from 'lucide-react';
+import { Plus, X, Pencil, Trash2, Play, Bell, Megaphone, Eye, EyeOff, GripVertical } from 'lucide-react';
+import MasterHeader from '@/components/master/MasterHeader';
 
 const TYPE_CONFIG = {
   tutorial: { label: 'Tutorial', icon: Play, color: 'bg-blue-100 text-blue-700' },
@@ -82,21 +83,7 @@ export default function MasterConteudo() {
 
   return (
     <div className="min-h-screen bg-[#F7F3EC] font-inter">
-      {/* Header */}
-      <header className="bg-[#111111] text-white px-8 py-5 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(200,155,60,0.2)' }}>
-            <span style={{ fontFamily: 'var(--font-playfair)', fontWeight: 700, fontSize: 13, color: '#C89B3C' }}>GB</span>
-          </div>
-          <div>
-            <div className="font-bold">Gestor Barber — Master</div>
-            <div className="text-xs text-white/60">Central de Conteúdo</div>
-          </div>
-        </div>
-        <Link to="/master" className="flex items-center gap-2 text-sm text-white/70 hover:text-white">
-          <ArrowLeft className="w-4 h-4" />Voltar
-        </Link>
-      </header>
+      <MasterHeader active="/master/conteudo" />
 
       <div className="p-8 max-w-5xl mx-auto">
         <div className="mb-6 flex items-center justify-between">

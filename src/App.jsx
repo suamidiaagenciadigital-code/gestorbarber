@@ -26,7 +26,6 @@ import CadastrarSucesso from './pages/CadastrarSucesso';
 // Master pages
 import MasterLogin from './pages/master/MasterLogin';
 import ListaBarbearias from './pages/master/ListaBarbearias';
-import NovaBarbearia from './pages/master/NovaBarbearia';
 import FinanceiroMaster from './pages/master/FinanceiroMaster';
 import MasterConteudo from './pages/master/MasterConteudo';
 
@@ -92,7 +91,6 @@ function App() {
             <Route path="/master/login" element={<MasterLogin />} />
             <Route path="/master" element={<SuperAdminRoute><MasterPanel /></SuperAdminRoute>} />
             <Route path="/master/barbearias" element={<SuperAdminRoute><ListaBarbearias /></SuperAdminRoute>} />
-            <Route path="/master/barbearias/nova" element={<SuperAdminRoute><NovaBarbearia /></SuperAdminRoute>} />
             <Route path="/master/conteudo" element={<SuperAdminRoute><MasterConteudo /></SuperAdminRoute>} />
             <Route path="/master/financeiro" element={<SuperAdminRoute><FinanceiroMaster /></SuperAdminRoute>} />
 

@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { TrendingUp, Users, Clock, AlertCircle, DollarSign, Play } from 'lucide-react';
+import MasterHeader from '@/components/master/MasterHeader';
 
 const PLAN_PRICE = { starter: 59, pro: 99, premium: 149 };
 const PLAN_LABEL = { starter: 'Essencial', pro: 'Profissional', premium: 'Premium' };
@@ -116,29 +117,17 @@ export default function FinanceiroMaster() {
 
   return (
     <div className="min-h-screen bg-[#F7F3EC] font-inter">
-      <header className="bg-[#111111] text-white px-8 py-5 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(200,155,60,0.2)' }}>
-            <span style={{ fontFamily: 'var(--font-playfair)', fontWeight: 700, fontSize: 13, color: '#C89B3C', letterSpacing: '-0.5px' }}>GB</span>
-          </div>
-          <div>
-            <div className="font-bold">Gestor Barber — Financeiro</div>
-            <div className="text-xs text-white/60">Receita e assinaturas</div>
-          </div>
-        </div>
-        <div className="flex items-center gap-4">
-          <button
-            onClick={runFollowupTest}
-            disabled={testing}
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-semibold disabled:opacity-60 transition-colors"
-            style={{ background: 'rgba(200,155,60,0.2)', color: '#C89B3C' }}>
-            <Play className="w-3 h-3" />
-            {testing ? 'Executando...' : 'Testar follow-up'}
-          </button>
-          <Link to="/master/barbearias" className="text-xs text-white/60 hover:text-white">Barbearias</Link>
-          <Link to="/master" className="text-xs text-white/60 hover:text-white">← Master</Link>
-        </div>
-      </header>
+      <MasterHeader active="/master/financeiro" />
+      <div className="flex items-center justify-end px-8 pt-5">
+        <button
+          onClick={runFollowupTest}
+          disabled={testing}
+          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-semibold disabled:opacity-60 transition-colors border border-[#C89B3C]/40 text-[#C89B3C] hover:bg-[#C89B3C]/10"
+          style={{}}>
+          <Play className="w-3 h-3" />
+          {testing ? 'Executando...' : 'Testar follow-up'}
+        </button>
+      </div>
 
       <div className="p-8 space-y-8">
         {/* KPI Cards */}

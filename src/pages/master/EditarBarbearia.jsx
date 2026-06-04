@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { ArrowLeft, Save } from 'lucide-react';
+import { Save } from 'lucide-react';
+import MasterHeader from '@/components/master/MasterHeader';
 
 const Field = ({ label, children, full }) => (
   <div className={full ? 'md:col-span-2' : ''}>
@@ -55,20 +56,7 @@ export default function EditarBarbearia() {
 
   return (
     <div className="min-h-screen bg-[#F7F3EC] font-inter">
-      <header className="bg-[#111111] text-white px-8 py-5 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(200,155,60,0.2)' }}>
-            <span style={{ fontFamily: 'var(--font-playfair)', fontWeight: 700, fontSize: 13, color: '#C89B3C' }}>GB</span>
-          </div>
-          <div>
-            <div className="font-bold">Gestor Barber — Master</div>
-            <div className="text-xs text-white/60">Editar barbearia</div>
-          </div>
-        </div>
-        <Link to="/master/barbearias" className="flex items-center gap-2 text-sm text-white/70 hover:text-white">
-          <ArrowLeft className="w-4 h-4" />Voltar
-        </Link>
-      </header>
+      <MasterHeader active="/master/barbearias" />
 
       <div className="max-w-4xl mx-auto p-8">
         <h1 className="text-2xl font-black text-[#1B1C1E] mb-6">{form.nome_fantasia || form.name}</h1>
